@@ -14,6 +14,9 @@ import java.util.concurrent.TimeUnit
 interface SubsonicApi {
     @GET("rest/ping")
     suspend fun ping(@QueryMap params: Map<String, String>): SubsonicEnvelope
+
+    @GET("rest/getAlbumList2")
+    suspend fun albumes(@QueryMap params: Map<String, String>): AlbumListEnvelope
 }
 
 object SubsonicAuth {
