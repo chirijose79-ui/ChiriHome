@@ -1,0 +1,19 @@
+# Secretos
+.env
+*.key
+*.pem
+
+# Datos del servidor
+servidor/**/data/
+
+# Multimedia
+*.mp3
+*.flac
+*.mp4
+*.mkv
+
+# Android Studio
+local.properties
+build/
+.gradle/
+.idea/
