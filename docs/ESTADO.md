@@ -18,4 +18,6 @@
 - Gateway propio con FastAPI para usuarios y permisos (Fase 6)
 
 ## Fase actual
-Fase 2: app Android v0.1 (ChiriMusic en app-android/)
+- Fase 3: app Android v0.2.
+- Fase 2 terminada: login, lista de álbumes con carátulas, canciones del álbum y reproducción básica.
+- Límites conocidos: el audio se corta al salir de la app y la sesión no se guarda.
