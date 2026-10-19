@@ -27,7 +27,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun LoginScreen(alConectar: () -> Unit, modifier: Modifier = Modifier, vm: LoginViewModel = viewModel()) {
-    var url by remember { mutableStateOf("http://192.168.1.88:4533") }
+    var url by remember { mutableStateOf("https://musica.chirihome.com") }
     var usuario by remember { mutableStateOf("") }
     var clave by remember { mutableStateOf("") }
     val estadoActual = vm.estado

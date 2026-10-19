@@ -57,5 +57,6 @@ data class Cancion(
     val artist: String? = null,
     val album: String? = null,
     val track: Int? = null,
-    val duration: Int? = null
+    val duration: Int? = null,
+    val coverArt: String? = null
 )
