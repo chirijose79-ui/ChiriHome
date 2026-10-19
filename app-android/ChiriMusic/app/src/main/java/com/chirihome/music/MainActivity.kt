@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.chirihome.music.data.Sesion
 import com.chirihome.music.player.Reproductor
 import com.chirihome.music.ui.album.AlbumScreen
 import com.chirihome.music.ui.albumes.AlbumesScreen
@@ -27,6 +28,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Sesion.init(this)
+        val haySesion = Sesion.api != null || Sesion.restaurar()
         Reproductor.iniciar(this)
         if (Build.VERSION.SDK_INT >= 33) {
             pedirNotificaciones.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -38,7 +41,7 @@ class MainActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
                         navController = nav,
-                        startDestination = "login",
+                        startDestination = if (haySesion) "albumes" else "login",
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable("login") {
@@ -49,7 +52,16 @@ class MainActivity : ComponentActivity() {
                             })
                         }
                         composable("albumes") {
-                            AlbumesScreen(alAbrir = { id -> nav.navigate("album/$id") })
+                            AlbumesScreen(
+                                alAbrir = { id -> nav.navigate("album/$id") },
+                                alSalir = {
+                                    Reproductor.detener()
+                                    Sesion.cerrar()
+                                    nav.navigate("login") {
+                                        popUpTo("albumes") { inclusive = true }
+                                    }
+                                }
+                            )
                         }
                         composable("album/{id}") { AlbumScreen() }
                     }

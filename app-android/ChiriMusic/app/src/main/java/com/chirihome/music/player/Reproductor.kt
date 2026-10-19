@@ -79,6 +79,14 @@ object Reproductor {
 
     fun anterior() { controlador?.seekToPreviousMediaItem() }
 
+    fun detener() {
+        controlador?.run {
+            stop()
+            clearMediaItems()
+        }
+        actual.value = null
+    }
+
     private fun MediaItem.aCancion() = Cancion(
         id = mediaId,
         title = mediaMetadata.title?.toString(),
