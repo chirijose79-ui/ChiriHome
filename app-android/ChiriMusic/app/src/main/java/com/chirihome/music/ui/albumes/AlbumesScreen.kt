@@ -1,5 +1,6 @@
 package com.chirihome.music.ui.albumes
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,7 +31,11 @@ import com.chirihome.music.data.Album
 import com.chirihome.music.data.Sesion
 
 @Composable
-fun AlbumesScreen(modifier: Modifier = Modifier, vm: AlbumesViewModel = viewModel()) {
+fun AlbumesScreen(
+    alAbrir: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    vm: AlbumesViewModel = viewModel()
+) {
     when (val e = vm.estado) {
         EstadoAlbumes.Cargando -> Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
@@ -52,14 +57,14 @@ fun AlbumesScreen(modifier: Modifier = Modifier, vm: AlbumesViewModel = viewMode
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(e.albumes, key = { it.id }) { album -> TarjetaAlbum(album) }
+            items(e.albumes, key = { it.id }) { album -> TarjetaAlbum(album, alAbrir) }
         }
     }
 }
 
 @Composable
-private fun TarjetaAlbum(album: Album) {
-    Column {
+private fun TarjetaAlbum(album: Album, alAbrir: (String) -> Unit) {
+    Column(Modifier.clickable { alAbrir(album.id) }) {
         Card {
             AsyncImage(
                 model = album.coverArt?.let { Sesion.urlCaratula(it) },

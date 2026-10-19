@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.chirihome.music.player.Reproductor
+import com.chirihome.music.ui.album.AlbumScreen
 import com.chirihome.music.ui.albumes.AlbumesScreen
 import com.chirihome.music.ui.login.LoginScreen
 import com.chirihome.music.ui.theme.ChiriMusicTheme
@@ -18,6 +20,7 @@ import com.chirihome.music.ui.theme.ChiriMusicTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Reproductor.iniciar(this)
         enableEdgeToEdge()
         setContent {
             ChiriMusicTheme {
@@ -35,7 +38,10 @@ class MainActivity : ComponentActivity() {
                                 }
                             })
                         }
-                        composable("albumes") { AlbumesScreen() }
+                        composable("albumes") {
+                            AlbumesScreen(alAbrir = { id -> nav.navigate("album/$id") })
+                        }
+                        composable("album/{id}") { AlbumScreen() }
                     }
                 }
             }

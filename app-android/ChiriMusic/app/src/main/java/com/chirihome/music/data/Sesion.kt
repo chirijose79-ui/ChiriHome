@@ -17,10 +17,15 @@ object Sesion {
 
     fun parametros(): Map<String, String> = auth
 
+    private fun consulta(extra: Map<String, String>): String =
+        (auth + extra).entries.joinToString("&") {
+            "${it.key}=${URLEncoder.encode(it.value, "UTF-8")}"
+        }
+
     // La sal es fija durante la sesión, así Coil puede guardar las carátulas en caché
-    fun urlCaratula(id: String, tamano: Int = 300): String {
-        val q = (auth + mapOf("id" to id, "size" to tamano.toString()))
-            .entries.joinToString("&") { "${it.key}=${URLEncoder.encode(it.value, "UTF-8")}" }
-        return "${urlBase}rest/getCoverArt?$q"
-    }
+    fun urlCaratula(id: String, tamano: Int = 300): String =
+        "${urlBase}rest/getCoverArt?" + consulta(mapOf("id" to id, "size" to tamano.toString()))
+
+    fun urlStream(id: String): String =
+        "${urlBase}rest/stream?" + consulta(mapOf("id" to id))
 }

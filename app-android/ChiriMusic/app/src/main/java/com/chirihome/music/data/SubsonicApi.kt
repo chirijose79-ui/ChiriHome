@@ -17,6 +17,9 @@ interface SubsonicApi {
 
     @GET("rest/getAlbumList2")
     suspend fun albumes(@QueryMap params: Map<String, String>): AlbumListEnvelope
+
+    @GET("rest/getAlbum")
+    suspend fun album(@QueryMap params: Map<String, String>): AlbumDetalleEnvelope
 }
 
 object SubsonicAuth {
