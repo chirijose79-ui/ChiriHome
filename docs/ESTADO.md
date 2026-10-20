@@ -10,19 +10,25 @@
 - Windows (PC y laptop): C:\ChiriHome
 - Pi: /home/chiri/ChiriHome
 - Flujo: editar en Windows → push → pull en la Pi
+- Repo público: github.com/chirijose79-ui/ChiriHome (rama main)
+
+## App Android (app-android/ChiriMusic)
+- Kotlin, Jetpack Compose, Media3 (servicio MediaSessionService), Retrofit + kotlinx-serialization, Coil 3, Navigation Compose
+- AGP 9.4.1, Kotlin 2.2.10, compileSdk 37, minSdk 26
+- Sin Hilt ni Room todavía (necesitan KSP, que da problemas con AGP 9). Se usan ViewModel y objetos simples
+- Paquete: com.chirihome.music
+- Estructura: data/ (modelos, SubsonicApi, Sesion, Favoritos, Playlists), player/ (Reproductor, ServicioReproduccion), ui/ (login, albumes, album, buscar, favoritos, cola, playlists, playlist, componentes, reproductor, theme)
+- API Subsonic de Navidrome con token (md5 de contraseña + sal). HTTP en claro permitido solo para 192.168.1.88
+- La sesión guarda URL, usuario y token (no la contraseña) en almacenamiento privado, con allowBackup desactivado
 
 ## Decisiones
 - Todo gratuito
-- App Android propia (ChiriMusic): Kotlin, Jetpack Compose, Media3, Retrofit con kotlinx-serialization, Coil, Navigation Compose
-- Proyecto con AGP 9.4.1 y Kotlin 2.2.10. Hilt y Room (necesitan KSP) quedan para más adelante; por ahora ViewModel y objetos simples (Sesion, Reproductor)
-- Música: Navidrome (API Subsonic). Video: Jellyfin por Tailscale (Fase 7)
+- Música: Navidrome. Video: Jellyfin por Tailscale (Fase 7)
 - Gateway propio con FastAPI para usuarios y permisos (Fase 6)
-- HTTP en claro permitido solo para 192.168.1.88 (network_security_config)
 
 ## Fase actual
-- Fase 3: app Android v0.2.
-- Hecho: login, álbumes con carátulas, canciones del álbum, reproducción en segundo plano con notificación, sesión guardada, cerrar sesión, búsqueda y favoritos.
-- Pendiente: cola, playlists.
+- Fase 3 terminada: segundo plano con notificación, sesión guardada, búsqueda, favoritos, cola y playlists (sincronizados con Navidrome).
+- Siguiente: Fase 4 (descargas offline, caché, ecualizador, Android Auto).
 
-## Notas
-- La sesión guarda URL, usuario y token Subsonic (no la contraseña) en almacenamiento privado, con allowBackup desactivado. Se reemplaza por JWT en la Fase 6.
+## Pendientes de la Fase 1
+- Fijar IP en el router, crear usuario normal en Navidrome, corregir números de pista.
