@@ -36,6 +36,7 @@ import com.chirihome.music.ui.reproductor.MiniReproductor
 @Composable
 fun AlbumesScreen(
     alAbrir: (String) -> Unit,
+    alBuscar: () -> Unit,
     alSalir: () -> Unit,
     modifier: Modifier = Modifier,
     vm: AlbumesViewModel = viewModel()
@@ -43,10 +44,14 @@ fun AlbumesScreen(
     Column(modifier.fillMaxSize()) {
         Row(
             Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Álbumes", style = MaterialTheme.typography.titleLarge)
+            Text(
+                "Álbumes",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = alBuscar) { Text("Buscar") }
             TextButton(onClick = alSalir) { Text("Cerrar sesión") }
         }
 

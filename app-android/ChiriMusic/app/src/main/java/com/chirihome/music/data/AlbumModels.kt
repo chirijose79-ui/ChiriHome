@@ -60,3 +60,21 @@ data class Cancion(
     val duration: Int? = null,
     val coverArt: String? = null
 )
+
+@Serializable
+data class BusquedaEnvelope(
+    @SerialName("subsonic-response") val respuesta: BusquedaRespuesta
+)
+
+@Serializable
+data class BusquedaRespuesta(
+    val status: String,
+    val searchResult3: ResultadoBusqueda? = null,
+    val error: SubsonicError? = null
+)
+
+@Serializable
+data class ResultadoBusqueda(
+    val album: List<Album> = emptyList(),
+    val song: List<Cancion> = emptyList()
+)

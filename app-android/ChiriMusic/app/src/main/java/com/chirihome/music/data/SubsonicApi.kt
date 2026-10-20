@@ -20,6 +20,9 @@ interface SubsonicApi {
 
     @GET("rest/getAlbum")
     suspend fun album(@QueryMap params: Map<String, String>): AlbumDetalleEnvelope
+
+    @GET("rest/search3")
+    suspend fun buscar(@QueryMap params: Map<String, String>): BusquedaEnvelope
 }
 
 object SubsonicAuth {
