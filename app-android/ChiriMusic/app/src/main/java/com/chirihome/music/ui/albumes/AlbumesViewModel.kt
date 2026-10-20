@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chirihome.music.data.Album
 import com.chirihome.music.data.Sesion
+import com.chirihome.music.data.Favoritos
 import kotlinx.coroutines.launch
 
 sealed interface EstadoAlbumes {
@@ -19,7 +20,10 @@ class AlbumesViewModel : ViewModel() {
     var estado by mutableStateOf<EstadoAlbumes>(EstadoAlbumes.Cargando)
         private set
 
-    init { cargar() }
+    init {
+        cargar()
+        Favoritos.cargar()
+    }
 
     fun cargar() {
         estado = EstadoAlbumes.Cargando

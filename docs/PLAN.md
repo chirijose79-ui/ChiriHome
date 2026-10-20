@@ -9,7 +9,7 @@
   - [x] Reproducción en segundo plano (servicio Media3 + notificación)
   - [x] Guardar la sesión y cerrar sesión
   - [x] Búsqueda de álbumes y canciones
-  - [ ] Favoritos
+  - [x] Favoritos
   - [ ] Cola de reproducción
   - [ ] Playlists
 - [ ] **Fase 4:** Offline y extras (descargas, caché, ecualizador, Android Auto)

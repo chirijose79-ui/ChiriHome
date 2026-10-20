@@ -23,6 +23,15 @@ interface SubsonicApi {
 
     @GET("rest/search3")
     suspend fun buscar(@QueryMap params: Map<String, String>): BusquedaEnvelope
+
+    @GET("rest/getStarred2")
+    suspend fun favoritos(@QueryMap params: Map<String, String>): FavoritosEnvelope
+
+    @GET("rest/star")
+    suspend fun agregarFavorito(@QueryMap params: Map<String, String>): SubsonicEnvelope
+
+    @GET("rest/unstar")
+    suspend fun quitarFavorito(@QueryMap params: Map<String, String>): SubsonicEnvelope
 }
 
 object SubsonicAuth {

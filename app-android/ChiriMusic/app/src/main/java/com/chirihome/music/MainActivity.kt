@@ -14,11 +14,13 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.chirihome.music.data.Favoritos
 import com.chirihome.music.data.Sesion
 import com.chirihome.music.player.Reproductor
 import com.chirihome.music.ui.album.AlbumScreen
 import com.chirihome.music.ui.albumes.AlbumesScreen
 import com.chirihome.music.ui.buscar.BuscarScreen
+import com.chirihome.music.ui.favoritos.FavoritosScreen
 import com.chirihome.music.ui.login.LoginScreen
 import com.chirihome.music.ui.theme.ChiriMusicTheme
 
@@ -56,8 +58,10 @@ class MainActivity : ComponentActivity() {
                             AlbumesScreen(
                                 alAbrir = { id -> nav.navigate("album/$id") },
                                 alBuscar = { nav.navigate("buscar") },
+                                alFavoritos = { nav.navigate("favoritos") },
                                 alSalir = {
                                     Reproductor.detener()
+                                    Favoritos.limpiar()
                                     Sesion.cerrar()
                                     nav.navigate("login") {
                                         popUpTo("albumes") { inclusive = true }
@@ -68,6 +72,7 @@ class MainActivity : ComponentActivity() {
                         composable("buscar") {
                             BuscarScreen(alAbrirAlbum = { id -> nav.navigate("album/$id") })
                         }
+                        composable("favoritos") { FavoritosScreen() }
                         composable("album/{id}") { AlbumScreen() }
                     }
                 }

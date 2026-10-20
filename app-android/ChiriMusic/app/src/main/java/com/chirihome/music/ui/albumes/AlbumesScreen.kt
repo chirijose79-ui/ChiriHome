@@ -37,6 +37,7 @@ import com.chirihome.music.ui.reproductor.MiniReproductor
 fun AlbumesScreen(
     alAbrir: (String) -> Unit,
     alBuscar: () -> Unit,
+    alFavoritos: () -> Unit,
     alSalir: () -> Unit,
     modifier: Modifier = Modifier,
     vm: AlbumesViewModel = viewModel()
@@ -52,7 +53,8 @@ fun AlbumesScreen(
                 modifier = Modifier.weight(1f)
             )
             TextButton(onClick = alBuscar) { Text("Buscar") }
-            TextButton(onClick = alSalir) { Text("Cerrar sesión") }
+            TextButton(onClick = alFavoritos) { Text("Favoritos") }
+            TextButton(onClick = alSalir) { Text("Salir") }
         }
 
         Box(Modifier.weight(1f).fillMaxWidth()) {
