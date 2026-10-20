@@ -27,8 +27,8 @@
 - Gateway propio con FastAPI para usuarios y permisos (Fase 6)
 
 ## Fase actual
-- Fase 3 terminada: segundo plano con notificación, sesión guardada, búsqueda, favoritos, cola y playlists (sincronizados con Navidrome).
-- Siguiente: Fase 4 (descargas offline, caché, ecualizador, Android Auto).
+- Fase 4 avanzada: descargas offline, caché, ecualizador.
+- Siguiente: Fase 4 (Android Auto).
 
 ## Pendientes de la Fase 1
 - Fijar IP en el router, crear usuario normal en Navidrome, corregir números de pista.
