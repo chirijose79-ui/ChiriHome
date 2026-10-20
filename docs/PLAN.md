@@ -10,7 +10,7 @@
   - [x] Guardar la sesión y cerrar sesión
   - [x] Búsqueda de álbumes y canciones
   - [x] Favoritos
-  - [ ] Cola de reproducción
+  - [x] Cola de reproducción
   - [ ] Playlists
 - [ ] **Fase 4:** Offline y extras (descargas, caché, ecualizador, Android Auto)
 - [ ] **Fase 5:** Acceso remoto (Cloudflare Tunnel, musica.chirihome.com)

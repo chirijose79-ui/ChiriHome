@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -17,9 +18,11 @@ import androidx.navigation.compose.rememberNavController
 import com.chirihome.music.data.Favoritos
 import com.chirihome.music.data.Sesion
 import com.chirihome.music.player.Reproductor
+import com.chirihome.music.ui.Navegacion
 import com.chirihome.music.ui.album.AlbumScreen
 import com.chirihome.music.ui.albumes.AlbumesScreen
 import com.chirihome.music.ui.buscar.BuscarScreen
+import com.chirihome.music.ui.cola.ColaScreen
 import com.chirihome.music.ui.favoritos.FavoritosScreen
 import com.chirihome.music.ui.login.LoginScreen
 import com.chirihome.music.ui.theme.ChiriMusicTheme
@@ -41,6 +44,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             ChiriMusicTheme {
                 val nav = rememberNavController()
+                SideEffect { Navegacion.abrirCola = { nav.navigate("cola") } }
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
                         navController = nav,
@@ -73,6 +77,7 @@ class MainActivity : ComponentActivity() {
                             BuscarScreen(alAbrirAlbum = { id -> nav.navigate("album/$id") })
                         }
                         composable("favoritos") { FavoritosScreen() }
+                        composable("cola") { ColaScreen() }
                         composable("album/{id}") { AlbumScreen() }
                     }
                 }

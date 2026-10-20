@@ -15,10 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.chirihome.music.player.Reproductor
+import com.chirihome.music.ui.Navegacion
 import com.chirihome.music.ui.componentes.BotonFavorito
 
 @Composable
-fun MiniReproductor(modifier: Modifier = Modifier) {
+fun MiniReproductor(modifier: Modifier = Modifier, mostrarCola: Boolean = true) {
     val cancion = Reproductor.actual.value ?: return
     Column(modifier.fillMaxWidth()) {
         HorizontalDivider()
@@ -51,6 +52,9 @@ fun MiniReproductor(modifier: Modifier = Modifier) {
                 Text(if (Reproductor.sonando.value) "Pausa" else "Play")
             }
             TextButton(onClick = { Reproductor.siguiente() }) { Text("Siguiente") }
+            if (mostrarCola) {
+                TextButton(onClick = { Navegacion.abrirCola() }) { Text("Cola") }
+            }
         }
     }
 }

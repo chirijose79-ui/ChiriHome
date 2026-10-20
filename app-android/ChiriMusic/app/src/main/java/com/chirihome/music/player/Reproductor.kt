@@ -3,12 +3,14 @@ package com.chirihome.music.player
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
+import android.os.Bundle
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.chirihome.music.data.Cancion
@@ -20,6 +22,8 @@ object Reproductor {
 
     val actual = mutableStateOf<Cancion?>(null)
     val sonando = mutableStateOf(false)
+    val cola = mutableStateOf<List<Cancion>>(emptyList())
+    val indiceActual = mutableStateOf(-1)
 
     fun iniciar(contexto: Context) {
         if (controlador != null || conectando) return
@@ -38,11 +42,15 @@ object Reproductor {
                     }
 
                     override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
-                        actual.value = item?.aCancion()
+                        refrescarCola()
+                    }
+
+                    override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+                        refrescarCola()
                     }
                 })
                 sonando.value = c.isPlaying
-                actual.value = c.currentMediaItem?.aCancion()
+                refrescarCola()
             } catch (e: Exception) {
                 Log.e("Reproductor", "No se pudo conectar con el servicio", e)
             }
@@ -51,23 +59,30 @@ object Reproductor {
 
     fun reproducir(canciones: List<Cancion>, indice: Int) {
         val c = controlador ?: return
-        val items = canciones.map { cancion ->
-            MediaItem.Builder()
-                .setMediaId(cancion.id)
-                .setUri(Sesion.urlStream(cancion.id))
-                .setMediaMetadata(
-                    MediaMetadata.Builder()
-                        .setTitle(cancion.title)
-                        .setArtist(cancion.artist)
-                        .setAlbumTitle(cancion.album)
-                        .setArtworkUri(cancion.coverArt?.let { Uri.parse(Sesion.urlCaratula(it, 512)) })
-                        .build()
-                )
-                .build()
-        }
-        c.setMediaItems(items, indice, 0L)
+        c.setMediaItems(canciones.map { aItem(it) }, indice, 0L)
         c.prepare()
         c.play()
+    }
+
+    fun agregarAlFinal(cancion: Cancion) {
+        val c = controlador ?: return
+        if (c.mediaItemCount == 0) {
+            reproducir(listOf(cancion), 0)
+        } else {
+            c.addMediaItem(aItem(cancion))
+        }
+    }
+
+    fun irA(indice: Int) {
+        val c = controlador ?: return
+        if (indice !in 0 until c.mediaItemCount) return
+        c.seekTo(indice, 0L)
+        c.play()
+    }
+
+    fun quitar(indice: Int) {
+        val c = controlador ?: return
+        if (indice in 0 until c.mediaItemCount) c.removeMediaItem(indice)
     }
 
     fun alternar() {
@@ -85,12 +100,39 @@ object Reproductor {
             clearMediaItems()
         }
         actual.value = null
+        cola.value = emptyList()
+        indiceActual.value = -1
+    }
+
+    private fun refrescarCola() {
+        val c = controlador ?: return
+        cola.value = (0 until c.mediaItemCount).map { c.getMediaItemAt(it).aCancion() }
+        indiceActual.value = if (c.mediaItemCount == 0) -1 else c.currentMediaItemIndex
+        actual.value = c.currentMediaItem?.aCancion()
+    }
+
+    private fun aItem(cancion: Cancion): MediaItem {
+        val extras = Bundle().apply { putString("coverArt", cancion.coverArt) }
+        return MediaItem.Builder()
+            .setMediaId(cancion.id)
+            .setUri(Sesion.urlStream(cancion.id))
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(cancion.title)
+                    .setArtist(cancion.artist)
+                    .setAlbumTitle(cancion.album)
+                    .setArtworkUri(cancion.coverArt?.let { Uri.parse(Sesion.urlCaratula(it, 512)) })
+                    .setExtras(extras)
+                    .build()
+            )
+            .build()
     }
 
     private fun MediaItem.aCancion() = Cancion(
         id = mediaId,
         title = mediaMetadata.title?.toString(),
         artist = mediaMetadata.artist?.toString(),
-        album = mediaMetadata.albumTitle?.toString()
+        album = mediaMetadata.albumTitle?.toString(),
+        coverArt = mediaMetadata.extras?.getString("coverArt")
     )
 }

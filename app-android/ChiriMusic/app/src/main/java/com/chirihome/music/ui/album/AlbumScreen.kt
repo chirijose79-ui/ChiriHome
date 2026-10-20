@@ -32,6 +32,7 @@ import com.chirihome.music.data.Sesion
 import com.chirihome.music.player.Reproductor
 import com.chirihome.music.ui.reproductor.MiniReproductor
 import com.chirihome.music.ui.componentes.BotonFavorito
+import com.chirihome.music.ui.componentes.BotonCola
 
 @Composable
 fun AlbumScreen(modifier: Modifier = Modifier, vm: AlbumViewModel = viewModel()) {
@@ -106,6 +107,7 @@ private fun FilaCancion(cancion: Cancion, numero: Int, alTocar: () -> Unit) {
         cancion.duration?.let {
             Text("%d:%02d".format(it / 60, it % 60), style = MaterialTheme.typography.bodySmall)
         }
+        BotonCola(cancion)
         BotonFavorito(cancion)
     }
 }
