@@ -5,13 +5,13 @@
   - [ ] Crear usuario normal en Navidrome
   - [ ] Corregir números de pista (Picard / Mp3tag)
 - [x] **Fase 2:** App Android v0.1 (login, biblioteca, reproducción básica)
-- [ ] **Fase 3:** App Android v0.2 (segundo plano, cola, búsqueda, favoritos, playlists)
+- [x] **Fase 3:** App Android v0.2 (segundo plano, cola, búsqueda, favoritos, playlists)
   - [x] Reproducción en segundo plano (servicio Media3 + notificación)
   - [x] Guardar la sesión y cerrar sesión
   - [x] Búsqueda de álbumes y canciones
   - [x] Favoritos
   - [x] Cola de reproducción
-  - [ ] Playlists
+  - [x] Playlists
 - [ ] **Fase 4:** Offline y extras (descargas, caché, ecualizador, Android Auto)
 - [ ] **Fase 5:** Acceso remoto (Cloudflare Tunnel, musica.chirihome.com)
 - [ ] **Fase 6:** Usuarios y permisos propios (API FastAPI, roles, bibliotecas)

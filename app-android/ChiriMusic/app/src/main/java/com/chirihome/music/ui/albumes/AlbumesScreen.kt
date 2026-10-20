@@ -38,22 +38,20 @@ fun AlbumesScreen(
     alAbrir: (String) -> Unit,
     alBuscar: () -> Unit,
     alFavoritos: () -> Unit,
+    alPlaylists: () -> Unit,
     alSalir: () -> Unit,
     modifier: Modifier = Modifier,
     vm: AlbumesViewModel = viewModel()
 ) {
     Column(modifier.fillMaxSize()) {
         Row(
-            Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                "Álbumes",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.weight(1f)
-            )
             TextButton(onClick = alBuscar) { Text("Buscar") }
             TextButton(onClick = alFavoritos) { Text("Favoritos") }
+            TextButton(onClick = alPlaylists) { Text("Playlists") }
             TextButton(onClick = alSalir) { Text("Salir") }
         }
 

@@ -16,6 +16,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.chirihome.music.data.Favoritos
+import com.chirihome.music.data.Playlists
 import com.chirihome.music.data.Sesion
 import com.chirihome.music.player.Reproductor
 import com.chirihome.music.ui.Navegacion
@@ -25,6 +26,8 @@ import com.chirihome.music.ui.buscar.BuscarScreen
 import com.chirihome.music.ui.cola.ColaScreen
 import com.chirihome.music.ui.favoritos.FavoritosScreen
 import com.chirihome.music.ui.login.LoginScreen
+import com.chirihome.music.ui.playlist.PlaylistScreen
+import com.chirihome.music.ui.playlists.PlaylistsScreen
 import com.chirihome.music.ui.theme.ChiriMusicTheme
 
 class MainActivity : ComponentActivity() {
@@ -63,9 +66,11 @@ class MainActivity : ComponentActivity() {
                                 alAbrir = { id -> nav.navigate("album/$id") },
                                 alBuscar = { nav.navigate("buscar") },
                                 alFavoritos = { nav.navigate("favoritos") },
+                                alPlaylists = { nav.navigate("playlists") },
                                 alSalir = {
                                     Reproductor.detener()
                                     Favoritos.limpiar()
+                                    Playlists.limpiar()
                                     Sesion.cerrar()
                                     nav.navigate("login") {
                                         popUpTo("albumes") { inclusive = true }
@@ -78,6 +83,10 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("favoritos") { FavoritosScreen() }
                         composable("cola") { ColaScreen() }
+                        composable("playlists") {
+                            PlaylistsScreen(alAbrir = { id -> nav.navigate("playlist/$id") })
+                        }
+                        composable("playlist/{id}") { PlaylistScreen() }
                         composable("album/{id}") { AlbumScreen() }
                     }
                 }

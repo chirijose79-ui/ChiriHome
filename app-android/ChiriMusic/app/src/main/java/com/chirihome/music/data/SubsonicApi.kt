@@ -32,6 +32,21 @@ interface SubsonicApi {
 
     @GET("rest/unstar")
     suspend fun quitarFavorito(@QueryMap params: Map<String, String>): SubsonicEnvelope
+
+    @GET("rest/getPlaylists")
+    suspend fun playlists(@QueryMap params: Map<String, String>): PlaylistsEnvelope
+
+    @GET("rest/getPlaylist")
+    suspend fun playlist(@QueryMap params: Map<String, String>): PlaylistDetalleEnvelope
+
+    @GET("rest/createPlaylist")
+    suspend fun crearPlaylist(@QueryMap params: Map<String, String>): SubsonicEnvelope
+
+    @GET("rest/updatePlaylist")
+    suspend fun actualizarPlaylist(@QueryMap params: Map<String, String>): SubsonicEnvelope
+
+    @GET("rest/deletePlaylist")
+    suspend fun borrarPlaylist(@QueryMap params: Map<String, String>): SubsonicEnvelope
 }
 
 object SubsonicAuth {
