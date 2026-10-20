@@ -24,6 +24,7 @@ import com.chirihome.music.ui.album.AlbumScreen
 import com.chirihome.music.ui.albumes.AlbumesScreen
 import com.chirihome.music.ui.buscar.BuscarScreen
 import com.chirihome.music.ui.cola.ColaScreen
+import com.chirihome.music.ui.ecualizador.EcualizadorScreen
 import com.chirihome.music.ui.favoritos.FavoritosScreen
 import com.chirihome.music.ui.login.LoginScreen
 import com.chirihome.music.ui.playlist.PlaylistScreen
@@ -47,7 +48,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             ChiriMusicTheme {
                 val nav = rememberNavController()
-                SideEffect { Navegacion.abrirCola = { nav.navigate("cola") } }
+                SideEffect {
+                    Navegacion.abrirCola = { nav.navigate("cola") }
+                    Navegacion.abrirEcualizador = { nav.navigate("ecualizador") }
+                }
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
                         navController = nav,
@@ -83,6 +87,7 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("favoritos") { FavoritosScreen() }
                         composable("cola") { ColaScreen() }
+                        composable("ecualizador") { EcualizadorScreen() }
                         composable("playlists") {
                             PlaylistsScreen(alAbrir = { id -> nav.navigate("playlist/$id") })
                         }

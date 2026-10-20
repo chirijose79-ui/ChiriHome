@@ -41,6 +41,9 @@ fun MiniReproductor(modifier: Modifier = Modifier, mostrarCola: Boolean = true) 
                     overflow = TextOverflow.Ellipsis
                 )
             }
+            if (mostrarCola) {
+                TextButton(onClick = { Navegacion.abrirEcualizador() }) { Text("EQ") }
+            }
             BotonFavorito(cancion)
         }
         Row(

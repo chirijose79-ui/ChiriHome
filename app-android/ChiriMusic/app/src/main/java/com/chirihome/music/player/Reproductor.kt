@@ -116,6 +116,7 @@ object Reproductor {
         return MediaItem.Builder()
             .setMediaId(cancion.id)
             .setUri(Sesion.urlStream(cancion.id))
+            .setCustomCacheKey(cancion.id)
             .setMediaMetadata(
                 MediaMetadata.Builder()
                     .setTitle(cancion.title)
