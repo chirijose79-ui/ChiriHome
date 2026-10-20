@@ -21,8 +21,8 @@
 
 ## Fase actual
 - Fase 3: app Android v0.2.
-- Hecho: login, álbumes con carátulas, canciones del álbum, reproducción en segundo plano con notificación (servicio Media3), sesión guardada y cerrar sesión.
-- Pendiente: cola, búsqueda, favoritos, playlists.
+- Hecho: login, álbumes con carátulas, canciones del álbum, reproducción en segundo plano con notificación, sesión guardada, cerrar sesión y búsqueda.
+- Pendiente: favoritos, cola, playlists.
 
 ## Notas
 - La sesión guarda URL, usuario y token Subsonic (no la contraseña) en almacenamiento privado, con allowBackup desactivado. Se reemplaza por JWT en la Fase 6.

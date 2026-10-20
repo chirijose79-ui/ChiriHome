@@ -6,11 +6,11 @@
   - [ ] Corregir números de pista (Picard / Mp3tag)
 - [x] **Fase 2:** App Android v0.1 (login, biblioteca, reproducción básica)
 - [ ] **Fase 3:** App Android v0.2 (segundo plano, cola, búsqueda, favoritos, playlists)
-  - [ ] Reproducción en segundo plano (servicio Media3 + notificación)
-  - [ ] Guardar la sesión (no escribir usuario y contraseña cada vez)
-  - [ ] Cola de reproducción
-  - [ ] Búsqueda
+  - [x] Reproducción en segundo plano (servicio Media3 + notificación)
+  - [x] Guardar la sesión y cerrar sesión
+  - [x] Búsqueda de álbumes y canciones
   - [ ] Favoritos
+  - [ ] Cola de reproducción
   - [ ] Playlists
 - [ ] **Fase 4:** Offline y extras (descargas, caché, ecualizador, Android Auto)
 - [ ] **Fase 5:** Acceso remoto (Cloudflare Tunnel, musica.chirihome.com)
