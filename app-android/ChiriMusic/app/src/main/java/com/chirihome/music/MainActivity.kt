@@ -18,12 +18,14 @@ import androidx.navigation.compose.rememberNavController
 import com.chirihome.music.data.Favoritos
 import com.chirihome.music.data.Playlists
 import com.chirihome.music.data.Sesion
+import com.chirihome.music.player.Descargas
 import com.chirihome.music.player.Reproductor
 import com.chirihome.music.ui.Navegacion
 import com.chirihome.music.ui.album.AlbumScreen
 import com.chirihome.music.ui.albumes.AlbumesScreen
 import com.chirihome.music.ui.buscar.BuscarScreen
 import com.chirihome.music.ui.cola.ColaScreen
+import com.chirihome.music.ui.descargas.DescargasScreen
 import com.chirihome.music.ui.ecualizador.EcualizadorScreen
 import com.chirihome.music.ui.favoritos.FavoritosScreen
 import com.chirihome.music.ui.login.LoginScreen
@@ -41,6 +43,7 @@ class MainActivity : ComponentActivity() {
         Sesion.init(this)
         val haySesion = Sesion.api != null || Sesion.restaurar()
         Reproductor.iniciar(this)
+        Descargas.iniciar(this)
         if (Build.VERSION.SDK_INT >= 33) {
             pedirNotificaciones.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
@@ -71,6 +74,7 @@ class MainActivity : ComponentActivity() {
                                 alBuscar = { nav.navigate("buscar") },
                                 alFavoritos = { nav.navigate("favoritos") },
                                 alPlaylists = { nav.navigate("playlists") },
+                                alDescargas = { nav.navigate("descargas") },
                                 alSalir = {
                                     Reproductor.detener()
                                     Favoritos.limpiar()
@@ -88,6 +92,7 @@ class MainActivity : ComponentActivity() {
                         composable("favoritos") { FavoritosScreen() }
                         composable("cola") { ColaScreen() }
                         composable("ecualizador") { EcualizadorScreen() }
+                        composable("descargas") { DescargasScreen() }
                         composable("playlists") {
                             PlaylistsScreen(alAbrir = { id -> nav.navigate("playlist/$id") })
                         }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,11 +21,15 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.chirihome.music.data.PlaylistDetalle
+import com.chirihome.music.player.Descargas
+import com.chirihome.music.player.EstadoDescarga
 import com.chirihome.music.player.Reproductor
+import com.chirihome.music.ui.componentes.BotonDescarga
 import com.chirihome.music.ui.componentes.BotonFavorito
 import com.chirihome.music.ui.reproductor.MiniReproductor
 
@@ -55,6 +60,13 @@ fun PlaylistScreen(modifier: Modifier = Modifier, vm: PlaylistViewModel = viewMo
 
 @Composable
 private fun Contenido(playlist: PlaylistDetalle, alQuitar: (Int) -> Unit) {
+    val contexto = LocalContext.current
+    // Una canción repetida en la playlist se descarga una sola vez
+    val unicas = playlist.entry.distinctBy { it.id }
+    val total = unicas.size
+    val listas = unicas.count { Descargas.estadoDe(it.id) == EstadoDescarga.LISTA }
+    val enCurso = unicas.filter { Descargas.estadoDe(it.id) == EstadoDescarga.EN_CURSO }
+
     LazyColumn(Modifier.fillMaxSize()) {
         item {
             Column(Modifier.padding(16.dp)) {
@@ -68,6 +80,29 @@ private fun Contenido(playlist: PlaylistDetalle, alQuitar: (Int) -> Unit) {
                     enabled = playlist.entry.isNotEmpty(),
                     onClick = { Reproductor.reproducir(playlist.entry, 0) }
                 ) { Text("Reproducir todo") }
+                if (total > 0) {
+                    TextButton(
+                        onClick = {
+                            when {
+                                listas == total ->
+                                    Descargas.quitarVarias(contexto, unicas.map { it.id })
+                                enCurso.isNotEmpty() ->
+                                    Descargas.quitarVarias(contexto, enCurso.map { it.id })
+                                else -> Descargas.descargarTodas(contexto, unicas)
+                            }
+                        },
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text(
+                            when {
+                                listas == total -> "Quitar descarga de la playlist"
+                                enCurso.isNotEmpty() -> "Cancelar descarga ($listas/$total)"
+                                listas > 0 -> "Descargar lo que falta"
+                                else -> "Descargar playlist"
+                            }
+                        )
+                    }
+                }
             }
         }
         itemsIndexed(playlist.entry, key = { i, c -> "${i}_${c.id}" }) { indice, cancion ->
@@ -91,6 +126,7 @@ private fun Contenido(playlist: PlaylistDetalle, alQuitar: (Int) -> Unit) {
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+                BotonDescarga(cancion)
                 TextButton(onClick = { alQuitar(indice) }) { Text("Quitar") }
                 BotonFavorito(cancion)
             }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,8 +19,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -32,6 +33,7 @@ import com.chirihome.music.data.AlbumDetalle
 import com.chirihome.music.data.Cancion
 import com.chirihome.music.data.Sesion
 import com.chirihome.music.player.Descargas
+import com.chirihome.music.player.EstadoDescarga
 import com.chirihome.music.player.Reproductor
 import com.chirihome.music.ui.reproductor.MiniReproductor
 import com.chirihome.music.ui.componentes.BotonDescarga
@@ -40,9 +42,6 @@ import com.chirihome.music.ui.componentes.BotonMas
 
 @Composable
 fun AlbumScreen(modifier: Modifier = Modifier, vm: AlbumViewModel = viewModel()) {
-    val contexto = LocalContext.current
-    LaunchedEffect(Unit) { Descargas.iniciar(contexto) }
-
     Column(modifier.fillMaxSize()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (val e = vm.estado) {
@@ -78,6 +77,11 @@ private fun ListaCanciones(album: AlbumDetalle) {
 
 @Composable
 private fun Cabecera(album: AlbumDetalle) {
+    val contexto = LocalContext.current
+    val total = album.song.size
+    val listas = album.song.count { Descargas.estadoDe(it.id) == EstadoDescarga.LISTA }
+    val enCurso = album.song.filter { Descargas.estadoDe(it.id) == EstadoDescarga.EN_CURSO }
+
     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
         AsyncImage(
             model = album.coverArt?.let { Sesion.urlCaratula(it) },
@@ -89,8 +93,31 @@ private fun Cabecera(album: AlbumDetalle) {
         Column {
             Text(album.name ?: "Sin título", style = MaterialTheme.typography.titleLarge)
             Text(album.artist ?: "", style = MaterialTheme.typography.bodyMedium)
-            val detalle = listOfNotNull(album.year?.toString(), "${album.song.size} canciones")
+            val detalle = listOfNotNull(album.year?.toString(), "$total canciones")
             Text(detalle.joinToString(" · "), style = MaterialTheme.typography.bodySmall)
+            if (total > 0) {
+                TextButton(
+                    onClick = {
+                        when {
+                            listas == total ->
+                                Descargas.quitarVarias(contexto, album.song.map { it.id })
+                            enCurso.isNotEmpty() ->
+                                Descargas.quitarVarias(contexto, enCurso.map { it.id })
+                            else -> Descargas.descargarTodas(contexto, album.song)
+                        }
+                    },
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text(
+                        when {
+                            listas == total -> "Quitar descarga del álbum"
+                            enCurso.isNotEmpty() -> "Cancelar descarga ($listas/$total)"
+                            listas > 0 -> "Descargar lo que falta"
+                            else -> "Descargar álbum"
+                        }
+                    )
+                }
+            }
         }
     }
 }

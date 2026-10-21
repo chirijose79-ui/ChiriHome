@@ -1,6 +1,7 @@
 package com.chirihome.music.ui.albumes
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,19 +41,23 @@ fun AlbumesScreen(
     alBuscar: () -> Unit,
     alFavoritos: () -> Unit,
     alPlaylists: () -> Unit,
+    alDescargas: () -> Unit,
     alSalir: () -> Unit,
     modifier: Modifier = Modifier,
     vm: AlbumesViewModel = viewModel()
 ) {
     Column(modifier.fillMaxSize()) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(onClick = alBuscar) { Text("Buscar") }
             TextButton(onClick = alFavoritos) { Text("Favoritos") }
             TextButton(onClick = alPlaylists) { Text("Playlists") }
+            TextButton(onClick = alDescargas) { Text("Descargas") }
             TextButton(onClick = alSalir) { Text("Salir") }
         }
 

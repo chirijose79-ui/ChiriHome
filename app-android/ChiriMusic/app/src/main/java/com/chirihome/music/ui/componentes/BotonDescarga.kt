@@ -28,7 +28,7 @@ fun BotonDescarga(cancion: Cancion) {
         Text(
             when (estado) {
                 EstadoDescarga.NINGUNA -> "↓"
-                EstadoDescarga.EN_CURSO -> "…"
+                EstadoDescarga.EN_CURSO -> Descargas.progresoDe(cancion.id)?.let { "$it%" } ?: "…"
                 EstadoDescarga.LISTA -> "✓"
                 EstadoDescarga.FALLIDA -> "!"
             }
