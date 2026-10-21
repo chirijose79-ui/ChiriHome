@@ -12,8 +12,13 @@
   - [x] Favoritos
   - [x] Cola de reproducción
   - [x] Playlists
-- [ ] **Fase 4:** Offline y extras (descargas, caché, ecualizador, Android Auto)
-- [ ] **Fase 5:** Acceso remoto (Cloudflare Tunnel, musica.chirihome.com)
+- [ ] **Fase 4:** Offline y extras
+  - [x] Caché de streaming
+  - [x] Ecualizador
+  - [x] Descargas offline (canciones, álbumes, playlists, pantalla Descargas)
+  - [ ] Android Auto (código preparado, falta probarlo con el Desktop Head Unit)
+- [x] **Fase 5:** Acceso remoto (Cloudflare Tunnel, musica.chirihome.com)
+  - [ ] Usar un usuario normal (no administrador) en la app
 - [ ] **Fase 6:** Usuarios y permisos propios (API FastAPI, roles, bibliotecas)
 - [ ] **Fase 7:** Servidor de video (Jellyfin + Tailscale + pantalla de video)
 
