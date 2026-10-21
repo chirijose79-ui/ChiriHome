@@ -3,7 +3,6 @@ package com.chirihome.music.player
 import android.content.Context
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import java.io.File
@@ -21,7 +20,7 @@ object CacheAudio {
         val nueva = SimpleCache(
             File(app.cacheDir, "audio"),
             LeastRecentlyUsedCacheEvictor(LIMITE_BYTES),
-            StandaloneDatabaseProvider(app)
+            Descargas.proveedorBd(app)
         )
         cache = nueva
         return nueva

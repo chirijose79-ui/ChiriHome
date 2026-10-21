@@ -26,9 +26,14 @@ class ServicioReproduccion : MediaSessionService() {
             .setCache(CacheAudio.obtener(this))
             .setUpstreamDataSourceFactory(origen)
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+        val conDescargas = CacheDataSource.Factory()
+            .setCache(Descargas.cache(this))
+            .setCacheWriteDataSinkFactory(null)
+            .setUpstreamDataSourceFactory(conCache)
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
 
         val player = ExoPlayer.Builder(this)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(this).setDataSourceFactory(conCache))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(this).setDataSourceFactory(conDescargas))
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(C.USAGE_MEDIA)

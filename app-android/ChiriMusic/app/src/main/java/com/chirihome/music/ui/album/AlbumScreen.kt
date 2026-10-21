@@ -19,9 +19,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -29,13 +31,18 @@ import coil3.compose.AsyncImage
 import com.chirihome.music.data.AlbumDetalle
 import com.chirihome.music.data.Cancion
 import com.chirihome.music.data.Sesion
+import com.chirihome.music.player.Descargas
 import com.chirihome.music.player.Reproductor
 import com.chirihome.music.ui.reproductor.MiniReproductor
+import com.chirihome.music.ui.componentes.BotonDescarga
 import com.chirihome.music.ui.componentes.BotonFavorito
 import com.chirihome.music.ui.componentes.BotonMas
 
 @Composable
 fun AlbumScreen(modifier: Modifier = Modifier, vm: AlbumViewModel = viewModel()) {
+    val contexto = LocalContext.current
+    LaunchedEffect(Unit) { Descargas.iniciar(contexto) }
+
     Column(modifier.fillMaxSize()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (val e = vm.estado) {
@@ -107,6 +114,7 @@ private fun FilaCancion(cancion: Cancion, numero: Int, alTocar: () -> Unit) {
         cancion.duration?.let {
             Text("%d:%02d".format(it / 60, it % 60), style = MaterialTheme.typography.bodySmall)
         }
+        BotonDescarga(cancion)
         BotonMas(cancion)
         BotonFavorito(cancion)
     }
