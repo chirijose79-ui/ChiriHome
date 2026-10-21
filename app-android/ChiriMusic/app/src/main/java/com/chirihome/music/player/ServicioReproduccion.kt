@@ -11,15 +11,27 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.session.MediaLibraryService
+import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
+import com.chirihome.music.data.Sesion
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 
 @OptIn(UnstableApi::class)
-class ServicioReproduccion : MediaSessionService() {
-    private var sesion: MediaSession? = null
+class ServicioReproduccion : MediaLibraryService() {
+    private var sesion: MediaLibrarySession? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     override fun onCreate() {
         super.onCreate()
+
+        // Android Auto puede arrancar este servicio sin abrir la app
+        Sesion.init(this)
+        if (Sesion.api == null) Sesion.restaurar()
+        Descargas.iniciar(this)
 
         val origen = DefaultDataSource.Factory(this, DefaultHttpDataSource.Factory())
         val conCache = CacheDataSource.Factory()
@@ -51,10 +63,10 @@ class ServicioReproduccion : MediaSessionService() {
             }
         })
 
-        sesion = MediaSession.Builder(this, player).build()
+        sesion = MediaLibrarySession.Builder(this, player, BibliotecaAuto(scope)).build()
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = sesion
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = sesion
 
     // Si cierras la app desde recientes: sigue sonando, pero si estaba en pausa el servicio se apaga
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -64,6 +76,7 @@ class ServicioReproduccion : MediaSessionService() {
 
     override fun onDestroy() {
         EcualizadorAudio.liberar()
+        scope.cancel()
         sesion?.run {
             player.release()
             release()
