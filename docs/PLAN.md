@@ -18,7 +18,8 @@
   - [x] Descargas offline (canciones, álbumes, playlists, pantalla Descargas)
   - [ ] Android Auto (código preparado, falta probarlo con el Desktop Head Unit)
 - [x] **Fase 5:** Acceso remoto (Cloudflare Tunnel, musica.chirihome.com)
-  - [ ] Usar un usuario normal (no administrador) en la app
+  - [x] Crear usuario normal en Navidrome
+  - [x] Usar un usuario normal (no administrador) en la app
 - [ ] **Fase 6:** Usuarios y permisos propios (API FastAPI, roles, bibliotecas)
 - [ ] **Fase 7:** Servidor de video (Jellyfin + Tailscale + pantalla de video)
 
