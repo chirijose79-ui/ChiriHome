@@ -12,3 +12,14 @@ services:
     volumes:
       - ./data:/data
       - /mnt/biblioteca/musica:/music:ro
+
+  gateway:
+    build: ../gateway
+    container_name: gateway
+    restart: unless-stopped
+    environment:
+      UPSTREAM_URL: http://navidrome:4533
+    ports:
+      - "8000:8000"
+    depends_on:
+      - navidrome
