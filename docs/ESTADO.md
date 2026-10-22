@@ -39,7 +39,7 @@
 ## Fase actual
 - Fases 1 a 3 terminadas.
 - Fase 4: caché, ecualizador y descargas terminados y probados; Android Auto pendiente de probar.
-- Fase 5: túnel de Cloudflare funcionando; falta el usuario normal en Navidrome.
+- Fase 5: terminada (túnel de Cloudflare funcionando y la app usa un usuario normal).
 
 ## Pendientes
 - Fijar IP en el router
