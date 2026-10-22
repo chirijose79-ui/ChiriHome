@@ -17,8 +17,13 @@ services:
     build: ../gateway
     container_name: gateway
     restart: unless-stopped
+    env_file:
+      - /home/chiri/gateway.env
     environment:
       UPSTREAM_URL: http://navidrome:4533
+      DB_PATH: /data/gateway.db
+    volumes:
+      - /home/chiri/gateway-datos:/data
     ports:
       - "8000:8000"
     depends_on:
