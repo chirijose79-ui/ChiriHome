@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.media3.common.Player
 import com.chirihome.music.player.Reproductor
 import com.chirihome.music.ui.Navegacion
 import com.chirihome.music.ui.componentes.BotonFavorito
@@ -57,6 +58,23 @@ fun MiniReproductor(modifier: Modifier = Modifier, mostrarCola: Boolean = true) 
             TextButton(onClick = { Reproductor.siguiente() }) { Text("Siguiente") }
             if (mostrarCola) {
                 TextButton(onClick = { Navegacion.abrirCola() }) { Text("Cola") }
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            TextButton(onClick = { Reproductor.alternarAleatorio() }) {
+                Text(if (Reproductor.aleatorio.value) "Aleatorio: sí" else "Aleatorio: no")
+            }
+            TextButton(onClick = { Reproductor.alternarRepetir() }) {
+                Text(
+                    when (Reproductor.repetir.value) {
+                        Player.REPEAT_MODE_ALL -> "Repetir: lista"
+                        Player.REPEAT_MODE_ONE -> "Repetir: una"
+                        else -> "Repetir: no"
+                    }
+                )
             }
         }
     }

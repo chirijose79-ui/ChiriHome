@@ -97,6 +97,10 @@ private fun Cabecera(album: AlbumDetalle) {
             Text(detalle.joinToString(" · "), style = MaterialTheme.typography.bodySmall)
             if (total > 0) {
                 TextButton(
+                    onClick = { Reproductor.reproducirAleatorio(album.song) },
+                    contentPadding = PaddingValues(0.dp)
+                ) { Text("Reproducir en aleatorio") }
+                TextButton(
                     onClick = {
                         when {
                             listas == total ->

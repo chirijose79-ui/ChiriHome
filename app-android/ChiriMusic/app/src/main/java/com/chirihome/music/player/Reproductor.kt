@@ -2,6 +2,7 @@ package com.chirihome.music.player
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -19,16 +20,29 @@ import com.chirihome.music.data.Sesion
 object Reproductor {
     private var controlador: MediaController? = null
     private var conectando = false
+    private var prefs: SharedPreferences? = null
 
     val actual = mutableStateOf<Cancion?>(null)
     val sonando = mutableStateOf(false)
     val cola = mutableStateOf<List<Cancion>>(emptyList())
     val indiceActual = mutableStateOf(-1)
 
+    // Aleatorio: se aplica a las listas que se empiezan y mezcla lo que falta por sonar
+    val aleatorio = mutableStateOf(false)
+
+    // Player.REPEAT_MODE_OFF, REPEAT_MODE_ALL o REPEAT_MODE_ONE
+    val repetir = mutableStateOf(Player.REPEAT_MODE_OFF)
+
     fun iniciar(contexto: Context) {
+        val app = contexto.applicationContext
+        if (prefs == null) {
+            val p = app.getSharedPreferences("reproductor", Context.MODE_PRIVATE)
+            prefs = p
+            aleatorio.value = p.getBoolean("aleatorio", false)
+            repetir.value = p.getInt("repetir", Player.REPEAT_MODE_OFF)
+        }
         if (controlador != null || conectando) return
         conectando = true
-        val app = contexto.applicationContext
         val token = SessionToken(app, ComponentName(app, ServicioReproduccion::class.java))
         val futuro = MediaController.Builder(app, token).buildAsync()
         futuro.addListener({
@@ -48,7 +62,14 @@ object Reproductor {
                     override fun onTimelineChanged(timeline: Timeline, reason: Int) {
                         refrescarCola()
                     }
+
+                    override fun onRepeatModeChanged(repeatMode: Int) {
+                        repetir.value = repeatMode
+                        prefs?.edit()?.putInt("repetir", repeatMode)?.apply()
+                    }
                 })
+                // El servicio puede haberse reiniciado: se vuelve a aplicar lo guardado
+                c.repeatMode = repetir.value
                 sonando.value = c.isPlaying
                 refrescarCola()
             } catch (e: Exception) {
@@ -59,9 +80,53 @@ object Reproductor {
 
     fun reproducir(canciones: List<Cancion>, indice: Int) {
         val c = controlador ?: return
-        c.setMediaItems(canciones.map { aItem(it) }, indice, 0L)
+        if (canciones.isEmpty()) return
+        if (aleatorio.value) {
+            // La canción elegida suena primero y el resto va mezclado
+            val posicion = indice.coerceIn(canciones.indices)
+            val resto = (canciones.take(posicion) + canciones.drop(posicion + 1)).shuffled()
+            c.setMediaItems((listOf(canciones[posicion]) + resto).map { aItem(it) }, 0, 0L)
+        } else {
+            c.setMediaItems(canciones.map { aItem(it) }, indice, 0L)
+        }
         c.prepare()
         c.play()
+    }
+
+    // Mezcla toda la lista y empieza, sin importar el interruptor de aleatorio
+    fun reproducirAleatorio(canciones: List<Cancion>) {
+        val c = controlador ?: return
+        if (canciones.isEmpty()) return
+        c.setMediaItems(canciones.shuffled().map { aItem(it) }, 0, 0L)
+        c.prepare()
+        c.play()
+    }
+
+    fun alternarAleatorio() {
+        val nuevo = !aleatorio.value
+        aleatorio.value = nuevo
+        prefs?.edit()?.putBoolean("aleatorio", nuevo)?.apply()
+        if (nuevo) mezclarPendientes()
+    }
+
+    fun alternarRepetir() {
+        val c = controlador ?: return
+        c.repeatMode = when (c.repeatMode) {
+            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+            Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+            else -> Player.REPEAT_MODE_OFF
+        }
+    }
+
+    // Mezcla las canciones que faltan por sonar; la actual no se toca
+    private fun mezclarPendientes() {
+        val c = controlador ?: return
+        val actualIndice = c.currentMediaItemIndex
+        val lista = cola.value
+        if (actualIndice < 0 || lista.size - actualIndice <= 2) return
+        val pendientes = lista.drop(actualIndice + 1).shuffled()
+        c.removeMediaItems(actualIndice + 1, lista.size)
+        c.addMediaItems(pendientes.map { aItem(it) })
     }
 
     fun agregarAlFinal(cancion: Cancion) {

@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -76,10 +77,16 @@ private fun Contenido(playlist: PlaylistDetalle, alQuitar: (Int) -> Unit) {
                     style = MaterialTheme.typography.bodySmall
                 )
                 Spacer(Modifier.height(12.dp))
-                Button(
-                    enabled = playlist.entry.isNotEmpty(),
-                    onClick = { Reproductor.reproducir(playlist.entry, 0) }
-                ) { Text("Reproducir todo") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        enabled = playlist.entry.isNotEmpty(),
+                        onClick = { Reproductor.reproducir(playlist.entry, 0) }
+                    ) { Text("Reproducir todo") }
+                    OutlinedButton(
+                        enabled = playlist.entry.isNotEmpty(),
+                        onClick = { Reproductor.reproducirAleatorio(playlist.entry) }
+                    ) { Text("Reproducir en aleatorio") }
+                }
                 if (total > 0) {
                     TextButton(
                         onClick = {
