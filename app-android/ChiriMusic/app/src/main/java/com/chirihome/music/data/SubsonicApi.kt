@@ -5,13 +5,19 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.QueryMap
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 interface SubsonicApi {
+    // Login propio del gateway ChiriHome: devuelve el token que se usa como "p"
+    @POST("_gateway/login")
+    suspend fun loginGateway(@Body datos: LoginGatewayPeticion): LoginGatewayRespuesta
+
     @GET("rest/ping")
     suspend fun ping(@QueryMap params: Map<String, String>): SubsonicEnvelope
 
@@ -51,6 +57,7 @@ interface SubsonicApi {
 
 object SubsonicAuth {
     // Autenticación Subsonic: token = md5(contraseña + sal). La contraseña no viaja en claro.
+    // Ya no se usa con el gateway (que usa su propio token); se deja por si se conecta a un Navidrome directo.
     fun parametros(usuario: String, clave: String): Map<String, String> {
         val sal = UUID.randomUUID().toString().replace("-", "").take(12)
         return mapOf(
@@ -75,6 +82,14 @@ object SubsonicFabrica {
     private val cliente = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
+        .addInterceptor { chain ->
+            val respuesta = chain.proceed(chain.request())
+            // Un 401 en la API significa que el token ya no vale
+            if (respuesta.code == 401 && chain.request().url.encodedPath.contains("/rest/")) {
+                Sesion.sesionCaducada.value = true
+            }
+            respuesta
+        }
         .build()
 
     fun normalizarUrl(texto: String): String {

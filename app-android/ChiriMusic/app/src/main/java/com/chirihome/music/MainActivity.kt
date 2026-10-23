@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
@@ -55,6 +56,22 @@ class MainActivity : ComponentActivity() {
                     Navegacion.abrirCola = { nav.navigate("cola") }
                     Navegacion.abrirEcualizador = { nav.navigate("ecualizador") }
                 }
+
+                // Si el servidor rechaza el token, se cierra la sesión y se vuelve al login
+                val caducada = Sesion.sesionCaducada.value
+                LaunchedEffect(caducada) {
+                    if (caducada) {
+                        Reproductor.detener()
+                        Favoritos.limpiar()
+                        Playlists.limpiar()
+                        Sesion.cerrar()
+                        nav.navigate("login") {
+                            popUpTo("albumes") { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                }
+
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
                         navController = nav,

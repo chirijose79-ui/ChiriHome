@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
     navidrome_usuario TEXT,
     activo INTEGER NOT NULL DEFAULT 1,
     version_token INTEGER NOT NULL DEFAULT 1,
-    creado TEXT NOT NULL DEFAULT (datetime('now'))
+    creado TEXT NOT NULL DEFAULT (datetime('now')),
+    expira TEXT
 );
 """
 
@@ -29,6 +30,13 @@ def _conexion():
         con.close()
 
 
+def _migrar(con):
+    # Las bases creadas antes de existir la caducidad no tienen la columna
+    columnas = {fila["name"] for fila in con.execute("PRAGMA table_info(usuarios)")}
+    if "expira" not in columnas:
+        con.execute("ALTER TABLE usuarios ADD COLUMN expira TEXT")
+
+
 def iniciar():
     carpeta = os.path.dirname(RUTA)
     if carpeta:
@@ -36,6 +44,7 @@ def iniciar():
     with _conexion() as con:
         con.execute("PRAGMA journal_mode=WAL")
         con.executescript(ESQUEMA)
+        _migrar(con)
 
 
 def _fila(fila):
@@ -59,18 +68,18 @@ def buscar_por_id(id_usuario):
 def listar():
     with _conexion() as con:
         filas = con.execute(
-            "SELECT id, nombre, rol, navidrome_usuario, activo, creado "
+            "SELECT id, nombre, rol, navidrome_usuario, activo, creado, expira "
             "FROM usuarios ORDER BY id"
         ).fetchall()
         return [dict(f) for f in filas]
 
 
-def crear(nombre, clave_hash, rol, navidrome_usuario):
+def crear(nombre, clave_hash, rol, navidrome_usuario, expira=None):
     with _conexion() as con:
         con.execute(
-            "INSERT INTO usuarios (nombre, clave_hash, rol, navidrome_usuario) "
-            "VALUES (?, ?, ?, ?)",
-            (nombre, clave_hash, rol, navidrome_usuario),
+            "INSERT INTO usuarios (nombre, clave_hash, rol, navidrome_usuario, expira) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (nombre, clave_hash, rol, navidrome_usuario, expira),
         )
 
 
@@ -101,4 +110,19 @@ def fijar_navidrome(nombre, navidrome_usuario):
             "UPDATE usuarios SET navidrome_usuario = ? WHERE nombre = ?",
             (navidrome_usuario, nombre),
         )
+        return cur.rowcount > 0
+
+
+def fijar_expira(nombre, expira):
+    with _conexion() as con:
+        cur = con.execute(
+            "UPDATE usuarios SET expira = ? WHERE nombre = ?",
+            (expira, nombre),
+        )
+        return cur.rowcount > 0
+
+
+def borrar(nombre):
+    with _conexion() as con:
+        cur = con.execute("DELETE FROM usuarios WHERE nombre = ?", (nombre,))
         return cur.rowcount > 0

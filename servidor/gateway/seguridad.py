@@ -1,6 +1,7 @@
 import os
 import time
 from collections import defaultdict, deque
+from datetime import date, datetime, timezone
 
 import jwt
 from argon2 import PasswordHasher
@@ -31,6 +32,17 @@ def verificar(clave: str, hash_guardado: str) -> bool:
         return _hasher.verify(hash_guardado, clave)
     except (VerificationError, InvalidHashError):
         return False
+
+
+def caducada(expira) -> bool:
+    """La cuenta vale hasta el final del día indicado (hora UTC)."""
+    if not expira:
+        return False
+    try:
+        limite = date.fromisoformat(expira)
+    except ValueError:
+        return True  # una fecha ilegible se trata como caducada, por seguridad
+    return datetime.now(timezone.utc).date() > limite
 
 
 def crear_token(usuario: dict) -> str:
@@ -93,4 +105,3 @@ class LimitadorIntentos:
 
     def limpiar(self, clave: str):
         self._fallos.pop(clave, None)
-    

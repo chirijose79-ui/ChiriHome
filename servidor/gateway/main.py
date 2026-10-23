@@ -98,6 +98,7 @@ async def _usuario_actual(request: Request):
         not usuario
         or not usuario["activo"]
         or usuario["version_token"] != carga.get("ver")
+        or seguridad.caducada(usuario.get("expira"))
     ):
         return None
     return usuario
@@ -160,12 +161,17 @@ async def login(datos: DatosLogin, request: Request):
         limitador.registrar_fallo(clave_usuario)
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
 
+    # Solo se llega aquí con la contraseña correcta, así que avisar no delata nada
+    if seguridad.caducada(usuario.get("expira")):
+        raise HTTPException(status_code=403, detail="La cuenta ha caducado")
+
     limitador.limpiar(clave_usuario)
     return {
         "token": seguridad.crear_token(usuario),
         "usuario": usuario["nombre"],
         "rol": usuario["rol"],
         "expira_en_segundos": seguridad.DURACION_TOKEN,
+        "cuenta_expira": usuario.get("expira"),
     }
 
 
@@ -174,7 +180,11 @@ async def yo(request: Request):
     usuario = await _usuario_actual(request)
     if not usuario:
         raise HTTPException(status_code=401, detail="Sesión no válida o caducada")
-    return {"usuario": usuario["nombre"], "rol": usuario["rol"]}
+    return {
+        "usuario": usuario["nombre"],
+        "rol": usuario["rol"],
+        "cuenta_expira": usuario.get("expira"),
+    }
 
 
 @app.api_route(
