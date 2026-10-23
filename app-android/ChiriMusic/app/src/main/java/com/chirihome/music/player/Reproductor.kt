@@ -159,6 +159,12 @@ object Reproductor {
 
     fun anterior() { controlador?.seekToPreviousMediaItem() }
 
+    // Posición actual dentro de la canción, para sincronizar la letra
+    fun posicionMs(): Long = controlador?.currentPosition ?: 0L
+
+    // Salta a un momento de la canción actual
+    fun irAPosicion(ms: Long) { controlador?.seekTo(ms) }
+
     fun detener() {
         controlador?.run {
             stop()

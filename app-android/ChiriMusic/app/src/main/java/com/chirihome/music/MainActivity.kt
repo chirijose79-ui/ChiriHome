@@ -29,6 +29,7 @@ import com.chirihome.music.ui.cola.ColaScreen
 import com.chirihome.music.ui.descargas.DescargasScreen
 import com.chirihome.music.ui.ecualizador.EcualizadorScreen
 import com.chirihome.music.ui.favoritos.FavoritosScreen
+import com.chirihome.music.ui.letra.LetraScreen
 import com.chirihome.music.ui.login.LoginScreen
 import com.chirihome.music.ui.playlist.PlaylistScreen
 import com.chirihome.music.ui.playlists.PlaylistsScreen
@@ -55,6 +56,7 @@ class MainActivity : ComponentActivity() {
                 SideEffect {
                     Navegacion.abrirCola = { nav.navigate("cola") }
                     Navegacion.abrirEcualizador = { nav.navigate("ecualizador") }
+                    Navegacion.abrirLetra = { nav.navigate("letra") }
                 }
 
                 // Si el servidor rechaza el token, se cierra la sesión y se vuelve al login
@@ -109,6 +111,7 @@ class MainActivity : ComponentActivity() {
                         composable("favoritos") { FavoritosScreen() }
                         composable("cola") { ColaScreen() }
                         composable("ecualizador") { EcualizadorScreen() }
+                        composable("letra") { LetraScreen() }
                         composable("descargas") { DescargasScreen() }
                         composable("playlists") {
                             PlaylistsScreen(alAbrir = { id -> nav.navigate("playlist/$id") })

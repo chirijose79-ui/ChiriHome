@@ -53,6 +53,10 @@ interface SubsonicApi {
 
     @GET("rest/deletePlaylist")
     suspend fun borrarPlaylist(@QueryMap params: Map<String, String>): SubsonicEnvelope
+
+    // Extensión OpenSubsonic: letra de una canción (sincronizada si el archivo la trae así)
+    @GET("rest/getLyricsBySongId")
+    suspend fun letra(@QueryMap params: Map<String, String>): LetraEnvelope
 }
 
 object SubsonicAuth {

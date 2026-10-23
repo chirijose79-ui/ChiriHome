@@ -76,6 +76,9 @@ fun MiniReproductor(modifier: Modifier = Modifier, mostrarCola: Boolean = true) 
                     }
                 )
             }
+            if (mostrarCola) {
+                TextButton(onClick = { Navegacion.abrirLetra() }) { Text("Letra") }
+            }
         }
     }
 }
