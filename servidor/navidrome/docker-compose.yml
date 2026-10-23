@@ -9,9 +9,15 @@ services:
     environment:
       ND_LOGLEVEL: info
       ND_SESSIONTIMEOUT: 24h
+      # Solo se confía en la cabecera de usuario si la petición viene del gateway.
+      # ExtAuth es el nombre actual; el segundo es el antiguo, por si la versión es anterior.
+      ND_EXTAUTH_TRUSTEDSOURCES: 10.77.0.10/32
+      ND_REVERSEPROXYWHITELIST: 10.77.0.10/32
     volumes:
       - ./data:/data
       - /mnt/biblioteca/musica:/music:ro
+    networks:
+      - chirihome
 
   gateway:
     build: ../gateway
@@ -28,3 +34,13 @@ services:
       - "8000:8000"
     depends_on:
       - navidrome
+    networks:
+      chirihome:
+        ipv4_address: 10.77.0.10
+
+networks:
+  chirihome:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.77.0.0/24

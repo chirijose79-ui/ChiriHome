@@ -8,6 +8,7 @@ import base_datos
 import seguridad
 
 PATRON_NOMBRE = re.compile(r"^[A-Za-z0-9_.-]{3,32}$")
+PATRON_NAVIDROME = re.compile(r"^[A-Za-z0-9_.@-]{1,64}$")
 
 
 def pedir_clave() -> str:
@@ -19,17 +20,22 @@ def pedir_clave() -> str:
     return clave
 
 
+def validar_navidrome(valor: str) -> str:
+    if not PATRON_NAVIDROME.match(valor):
+        sys.exit(
+            "Usuario de Navidrome no válido: usa letras, números, punto, guion, "
+            "guion bajo o arroba, sin espacios."
+        )
+    return valor
+
+
 def crear(args):
     if not PATRON_NOMBRE.match(args.nombre):
         sys.exit("Nombre no válido: usa de 3 a 32 letras, números, punto, guion o guion bajo.")
+    navidrome = validar_navidrome(args.navidrome or args.nombre)
     clave = pedir_clave()
     try:
-        base_datos.crear(
-            args.nombre,
-            seguridad.hashear(clave),
-            args.rol,
-            args.navidrome or args.nombre,
-        )
+        base_datos.crear(args.nombre, seguridad.hashear(clave), args.rol, navidrome)
     except sqlite3.IntegrityError:
         sys.exit("Ya existe un usuario con ese nombre.")
     print(f"Usuario '{args.nombre}' creado con rol {args.rol}.")
@@ -68,6 +74,13 @@ def clave(args):
     print(f"Contraseña de '{args.nombre}' cambiada. Sus sesiones anteriores dejan de valer.")
 
 
+def vincular(args):
+    navidrome = validar_navidrome(args.navidrome)
+    if not base_datos.fijar_navidrome(args.nombre, navidrome):
+        sys.exit("No existe ese usuario.")
+    print(f"Usuario '{args.nombre}' vinculado al usuario de Navidrome '{navidrome}'.")
+
+
 def main():
     base_datos.iniciar()
     parser = argparse.ArgumentParser(description="Gestión de usuarios del gateway ChiriHome")
@@ -93,6 +106,11 @@ def main():
     p = sub.add_parser("clave", help="Cambia la contraseña de un usuario")
     p.add_argument("nombre")
     p.set_defaults(func=clave)
+
+    p = sub.add_parser("vincular", help="Cambia el usuario de Navidrome vinculado")
+    p.add_argument("nombre")
+    p.add_argument("navidrome", help="Nombre exacto del usuario en Navidrome")
+    p.set_defaults(func=vincular)
 
     args = parser.parse_args()
     args.func(args)

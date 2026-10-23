@@ -1,3 +1,4 @@
+import json
 import os
 from contextlib import asynccontextmanager
 
@@ -13,6 +14,9 @@ import seguridad
 
 UPSTREAM = os.environ.get("UPSTREAM_URL", "http://navidrome:4533").rstrip("/")
 
+# Cabecera con la que Navidrome recibe el usuario ya autenticado
+HEADER_USUARIO = os.environ.get("NAVIDROME_USER_HEADER", "Remote-User").lower()
+
 # Cabeceras que son de una sola conexión y no se reenvían
 HOP_BY_HOP = {
     "connection",
@@ -24,6 +28,13 @@ HOP_BY_HOP = {
     "transfer-encoding",
     "upgrade",
 }
+
+# Nunca se reenvían tal cual: el host se recalcula, el token no debe llegar a
+# Navidrome y la cabecera de usuario solo la pone el gateway
+NO_REENVIAR = HOP_BY_HOP | {"host", "authorization", HEADER_USUARIO}
+
+# Parámetros de autenticación de Subsonic: se quitan antes de reenviar
+PARAMS_AUTH = {"p", "t", "s"}
 
 MAX_FALLOS_POR_USUARIO = 5
 MAX_FALLOS_POR_IP = 20
@@ -63,11 +74,19 @@ def _ip(request: Request) -> str:
     )
 
 
-async def _usuario_actual(request: Request):
+def _extraer_token(request: Request):
+    # Cabecera Authorization: Bearer ..., o el parámetro p de Subsonic
     cabecera = request.headers.get("authorization", "")
-    if not cabecera.lower().startswith("bearer "):
+    if cabecera.lower().startswith("bearer "):
+        return cabecera[7:].strip()
+    return request.query_params.get("p")
+
+
+async def _usuario_actual(request: Request):
+    token = _extraer_token(request)
+    if not token:
         return None
-    carga = seguridad.leer_token(cabecera[7:].strip())
+    carga = seguridad.leer_token(token)
     if not carga:
         return None
     try:
@@ -82,6 +101,34 @@ async def _usuario_actual(request: Request):
     ):
         return None
     return usuario
+
+
+def _no_autorizado(ruta: str) -> Response:
+    mensaje = "Sesión no válida o caducada"
+    if ruta.startswith("/rest/"):
+        cuerpo = {
+            "subsonic-response": {
+                "status": "failed",
+                "version": "1.16.1",
+                "error": {"code": 40, "message": mensaje},
+            }
+        }
+    else:
+        cuerpo = {"detail": mensaje}
+    return Response(
+        json.dumps(cuerpo), status_code=401, media_type="application/json"
+    )
+
+
+def _limpiar_consulta(consulta: bytes) -> bytes:
+    partes = []
+    for parte in consulta.split(b"&"):
+        if not parte:
+            continue
+        clave = parte.split(b"=", 1)[0].decode("latin-1")
+        if clave not in PARAMS_AUTH:
+            partes.append(parte)
+    return b"&".join(partes)
 
 
 @app.get("/_gateway/salud")
@@ -135,20 +182,29 @@ async def yo(request: Request):
     methods=["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 )
 async def reenviar(ruta: str, request: Request):
+    usuario = await _usuario_actual(request)
+    if not usuario:
+        return _no_autorizado(request.url.path)
+    if not usuario["navidrome_usuario"]:
+        return Response(
+            json.dumps({"detail": "Este usuario no tiene un usuario de Navidrome vinculado"}),
+            status_code=403,
+            media_type="application/json",
+        )
+
     cliente: httpx.AsyncClient = request.app.state.cliente
 
     # Se usa la ruta y la consulta tal como llegaron, sin decodificar
     ruta_cruda = request.scope.get("raw_path") or request.url.path.encode()
-    consulta = request.scope.get("query_string", b"")
+    consulta = _limpiar_consulta(request.scope.get("query_string", b""))
     destino = UPSTREAM + ruta_cruda.decode("latin-1")
     if consulta:
         destino += "?" + consulta.decode("latin-1")
 
     cabeceras = [
-        (k, v)
-        for k, v in request.headers.items()
-        if k.lower() not in HOP_BY_HOP and k.lower() != "host"
+        (k, v) for k, v in request.headers.items() if k.lower() not in NO_REENVIAR
     ]
+    cabeceras.append((HEADER_USUARIO, usuario["navidrome_usuario"]))
     cuerpo = None if request.method in ("GET", "HEAD", "OPTIONS") else request.stream()
 
     peticion = cliente.build_request(

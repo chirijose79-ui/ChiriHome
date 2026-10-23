@@ -93,3 +93,12 @@ def cambiar_clave(nombre, clave_hash):
             (clave_hash, nombre),
         )
         return cur.rowcount > 0
+
+
+def fijar_navidrome(nombre, navidrome_usuario):
+    with _conexion() as con:
+        cur = con.execute(
+            "UPDATE usuarios SET navidrome_usuario = ? WHERE nombre = ?",
+            (navidrome_usuario, nombre),
+        )
+        return cur.rowcount > 0
