@@ -85,7 +85,7 @@ private fun Contenido(playlist: PlaylistDetalle, alQuitar: (Int) -> Unit) {
                     OutlinedButton(
                         enabled = playlist.entry.isNotEmpty(),
                         onClick = { Reproductor.reproducirAleatorio(playlist.entry) }
-                    ) { Text("Reproducir en aleatorio") }
+                    ) { Text("Aleatorio") }
                 }
                 if (total > 0) {
                     TextButton(
