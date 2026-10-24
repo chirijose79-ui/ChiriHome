@@ -13,9 +13,14 @@ services:
       # ExtAuth es el nombre actual; el segundo es el antiguo, por si la versión es anterior.
       ND_EXTAUTH_TRUSTEDSOURCES: 10.77.0.10/32
       ND_REVERSEPROXYWHITELIST: 10.77.0.10/32
+      # Copia automática de la base de datos: cada día a las 3:00 UTC, se guardan las últimas 7
+      ND_BACKUP_PATH: /backup
+      ND_BACKUP_SCHEDULE: "0 3 * * *"
+      ND_BACKUP_COUNT: 7
     volumes:
       - ./data:/data
       - /mnt/biblioteca/musica:/music:ro
+      - /mnt/biblioteca/respaldos/navidrome:/backup
     networks:
       - chirihome
 
