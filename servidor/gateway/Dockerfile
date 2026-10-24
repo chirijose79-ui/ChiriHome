@@ -9,6 +9,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY *.py ./
+COPY panel.html panel.js ./
 
 RUN useradd --system --uid 1000 gateway
 USER gateway

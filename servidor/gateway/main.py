@@ -3,6 +3,7 @@ import os
 import sqlite3
 from contextlib import asynccontextmanager
 from datetime import date
+from pathlib import Path
 from typing import Literal
 
 import anyio
@@ -50,6 +51,22 @@ MAX_FALLOS_POR_IP = 20
 
 PATRON_NOMBRE = r"^[A-Za-z0-9_.-]{3,32}$"
 PATRON_NAVIDROME = r"^[A-Za-z0-9_.@-]{1,64}$"
+
+# Página de administración: se lee una vez al arrancar
+_CARPETA = Path(__file__).parent
+PANEL_HTML = (_CARPETA / "panel.html").read_text(encoding="utf-8")
+PANEL_JS = (_CARPETA / "panel.js").read_text(encoding="utf-8")
+
+# Solo se permite el script propio; no se carga nada externo
+CABECERAS_PANEL = {
+    "Content-Security-Policy": (
+        "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; "
+        "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    ),
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+}
 
 limitador = seguridad.LimitadorIntentos()
 
@@ -133,10 +150,14 @@ async def _usuario_actual(request: Request):
     return usuario
 
 
-async def _exigir_admin(request: Request) -> dict:
+def _exigir_lan(request: Request):
     # Por el túnel de Cloudflare la administración no existe, aunque el token sea válido
     if ADMIN_SOLO_LAN and any(request.headers.get(h) for h in CABECERAS_CLOUDFLARE):
         raise HTTPException(status_code=404, detail="No encontrado")
+
+
+async def _exigir_admin(request: Request) -> dict:
+    _exigir_lan(request)
     usuario = await _usuario_actual(request)
     if not usuario:
         raise HTTPException(status_code=401, detail="Sesión no válida o caducada")
@@ -240,6 +261,26 @@ async def yo(request: Request):
         "rol": usuario["rol"],
         "cuenta_expira": usuario.get("expira"),
     }
+
+
+# ---- Página de administración (solo desde la red local) ----
+
+
+@app.get("/_gateway/admin")
+@app.get("/_gateway/admin/")
+async def admin_pagina(request: Request):
+    _exigir_lan(request)
+    return Response(
+        PANEL_HTML, media_type="text/html; charset=utf-8", headers=CABECERAS_PANEL
+    )
+
+
+@app.get("/_gateway/admin/panel.js")
+async def admin_script(request: Request):
+    _exigir_lan(request)
+    return Response(
+        PANEL_JS, media_type="text/javascript; charset=utf-8", headers=CABECERAS_PANEL
+    )
 
 
 # ---- Administración de usuarios (solo administradores, solo desde la red local) ----

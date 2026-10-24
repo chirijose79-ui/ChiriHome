@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChiriHome · Administración</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --borde: #8886;
+    --acento: #3b6ef5;
+    --error: #c0392b;
+    --ok: #1e8e3e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.4;
+  }
+  main { max-width: 1000px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  h2 { font-size: 1.1rem; margin: 24px 0 8px; }
+  p.nota { margin: 0 0 16px; font-size: 0.9rem; opacity: 0.75; }
+  header.barra { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+  #aviso { margin: 12px 0; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--borde); }
+  #aviso:empty { display: none; }
+  #aviso.error { border-color: var(--error); color: var(--error); }
+  #aviso.ok { border-color: var(--ok); color: var(--ok); }
+  form.rejilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; align-items: end; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
+  input, select, button {
+    font: inherit;
+    padding: 8px 10px;
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+  }
+  button { cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--acento); }
+  button.principal { background: var(--acento); border-color: var(--acento); color: #fff; }
+  button.peligro { color: var(--error); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .ayuda { font-size: 0.8rem; opacity: 0.7; }
+  .tabla { overflow-x: auto; border: 1px solid var(--borde); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; min-width: 760px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  td.acciones { display: flex; flex-wrap: wrap; gap: 6px; }
+  td.acciones button { padding: 4px 8px; font-size: 0.85rem; }
+  .estado-ok { color: var(--ok); }
+  .estado-mal { color: var(--error); }
+  #login { max-width: 360px; margin: 48px auto; }
+  #login form { display: flex; flex-direction: column; gap: 12px; }
+  dialog { border: 1px solid var(--borde); border-radius: 12px; padding: 16px; max-width: 380px; width: calc(100% - 32px); }
+  dialog::backdrop { background: #0006; }
+  dialog h2 { margin-top: 0; }
+  dialog p { margin: 0 0 12px; font-size: 0.9rem; }
+  dialog input { width: 100%; }
+  .botones { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div id="aviso" role="status"></div>
+
+  <section id="vista-login" hidden>
+    <div id="login">
+      <h1>ChiriHome</h1>
+      <p class="nota">Administración de usuarios. Solo funciona desde tu red local.</p>
+      <form id="form-login">
+        <label>Usuario
+          <input id="login-usuario" autocomplete="username" required>
+        </label>
+        <label>Contraseña
+          <input id="login-clave" type="password" autocomplete="current-password" required>
+        </label>
+        <button class="principal" type="submit">Entrar</button>
+      </form>
+    </div>
+  </section>
+
+  <section id="vista-panel" hidden>
+    <header class="barra">
+      <div>
+        <h1>ChiriHome · Administración</h1>
+        <p class="nota">Sesión de <strong id="sesion-usuario"></strong>. Esta página solo existe en tu red local.</p>
+      </div>
+      <button id="boton-salir" type="button">Salir</button>
+    </header>
+
+    <h2>Crear usuario</h2>
+    <form id="form-crear" class="rejilla">
+      <label>Nombre
+        <input id="nuevo-nombre" required minlength="3" maxlength="32" pattern="[A-Za-z0-9_.\-]{3,32}" autocomplete="off">
+      </label>
+      <label>Contraseña
+        <input id="nuevo-clave" type="password" required minlength="10" maxlength="256" autocomplete="new-password">
+      </label>
+      <label>Rol
+        <select id="nuevo-rol">
+          <option value="usuario">usuario</option>
+          <option value="admin">admin</option>
+        </select>
+      </label>
+      <label>Usuario de Navidrome
+        <input id="nuevo-navidrome" maxlength="64" pattern="[A-Za-z0-9_.@\-]{1,64}" placeholder="igual que el nombre" autocomplete="off">
+      </label>
+      <label>Caduca (opcional)
+        <input id="nuevo-expira" type="date">
+      </label>
+      <button class="principal" type="submit">Crear</button>
+    </form>
+    <p class="ayuda">Nombre: de 3 a 32 letras, números, punto, guion o guion bajo. Contraseña: mínimo 10 caracteres. El usuario de Navidrome debe ser el nombre exacto de uno que exista allí: si no existe, Navidrome crea uno nuevo la primera vez que entre.</p>
+
+    <h2>Usuarios</h2>
+    <div class="tabla">
+      <table>
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Rol</th>
+            <th>Navidrome</th>
+            <th>Estado</th>
+            <th>Caduca</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="cuerpo-tabla"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<dialog id="dialogo">
+  <h2 id="dialogo-titulo"></h2>
+  <p id="dialogo-ayuda"></p>
+  <label id="dialogo-etiqueta-contenedor">
+    <span id="dialogo-etiqueta"></span>
+    <input id="dialogo-entrada" autocomplete="off">
+  </label>
+  <div class="botones">
+    <button id="dialogo-cancelar" type="button">Cancelar</button>
+    <button id="dialogo-extra" type="button" hidden></button>
+    <button id="dialogo-aceptar" class="principal" type="button">Aceptar</button>
+  </div>
+</dialog>
+
+<script src="/_gateway/admin/panel.js" defer></script>
+</body>
+</html>
