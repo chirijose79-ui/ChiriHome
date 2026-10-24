@@ -9,10 +9,8 @@ services:
     environment:
       ND_LOGLEVEL: info
       ND_SESSIONTIMEOUT: 24h
-      # Solo se confía en la cabecera de usuario si la petición viene del gateway.
-      # ExtAuth es el nombre actual; el segundo es el antiguo, por si la versión es anterior.
+      # Solo se confía en la cabecera de usuario si la petición viene del gateway
       ND_EXTAUTH_TRUSTEDSOURCES: 10.77.0.10/32
-      ND_REVERSEPROXYWHITELIST: 10.77.0.10/32
       # Copia automática de la base de datos: cada día a las 3:00 UTC, se guardan las últimas 7
       ND_BACKUP_PATH: /backup
       ND_BACKUP_SCHEDULE: "0 3 * * *"
