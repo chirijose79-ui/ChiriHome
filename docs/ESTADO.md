@@ -7,6 +7,7 @@
 - Navidrome 0.64.2 en el puerto 4533 (sigue publicado: se usa para administrar en casa y por el túnel solo pasa el gateway)
 - Red de Docker propia 10.77.0.0/24; el gateway tiene la IP fija 10.77.0.10
 - Dominio chirihome.com en Cloudflare. Túnel con cloudflared (gestionado desde el panel web de Cloudflare): musica.chirihome.com → http://localhost:8000 (gateway)
+- Copias de seguridad: Navidrome guarda una copia de su base de datos cada día a las 3:00 UTC (las últimas 7) en /mnt/biblioteca/respaldos/navidrome, fuera del repo. El respaldo del gateway es manual (docker compose exec gateway con la API de copia de SQLite) y está en C:\Respaldo-ChiriHome en el PC
 
 ## Rutas
 - Windows (PC y laptop): C:\ChiriHome
@@ -69,6 +70,5 @@
 - Corregir números de pista (Picard / Mp3tag)
 - Probar Android Auto con el Desktop Head Unit (las carátulas pueden no verse en el coche porque el servidor usaba HTTP; ahora el túnel es HTTPS)
 - Probar la pantalla de letra; si las canciones no tienen letra, añadirlas (archivos .lrc junto a la canción, etiquetas incrustadas o un plugin de Navidrome con LRCLIB)
-- Copia de seguridad de ~/gateway.env y ~/gateway-datos (fuera del repo)
 - Revisar si la imagen de Docker deluan/navidrome sigue actualizándose o hay que pasar a navidrome/navidrome
 - Panel de administración de usuarios (sin terminal)
