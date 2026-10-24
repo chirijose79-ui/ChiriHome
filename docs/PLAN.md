@@ -28,7 +28,7 @@
   - [x] App con login contra el gateway (el token va en el parámetro p)
   - [x] Cuentas con fecha de caducidad
   - [ ] Bibliotecas por usuario (con el multi-biblioteca nativo de Navidrome, cuando haga falta)
-  - [ ] API y panel de administración (gestionar usuarios sin terminal)
+  - [x] API y panel de administración (gestionar usuarios sin terminal)
 - [ ] **Fase 7:** Servidor de video (Jellyfin + Tailscale + pantalla de video)
 
 ## Mejoras de la app

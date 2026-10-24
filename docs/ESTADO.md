@@ -1,13 +1,13 @@
 # Estado actual
 
 ## Infraestructura
-- Raspberry Pi 4B, hostname chiripi, IP 192.168.1.88
-- Disco USB ext4 montado en /mnt/biblioteca (musica, video)
+- Raspberry Pi 4B, hostname chiripi, IP fija 192.168.1.88 (configurada en la Pi y reservada en el router)
+- Disco USB ext4 montado en /mnt/biblioteca (musica, video, respaldos)
 - Docker en ~/ChiriHome/servidor/navidrome (docker-compose.yml con dos servicios: navidrome y gateway)
 - Navidrome 0.64.2 en el puerto 4533 (sigue publicado: se usa para administrar en casa y por el túnel solo pasa el gateway)
 - Red de Docker propia 10.77.0.0/24; el gateway tiene la IP fija 10.77.0.10
 - Dominio chirihome.com en Cloudflare. Túnel con cloudflared (gestionado desde el panel web de Cloudflare): musica.chirihome.com → http://localhost:8000 (gateway)
-- Copias de seguridad: Navidrome guarda una copia de su base de datos cada día a las 3:00 UTC (las últimas 7) en /mnt/biblioteca/respaldos/navidrome, fuera del repo. El respaldo del gateway es manual (docker compose exec gateway con la API de copia de SQLite) y está en C:\Respaldo-ChiriHome en el PC
+- Copias de seguridad: Navidrome guarda una copia de su base de datos cada día a las 3:00 UTC (las últimas 7) en /mnt/biblioteca/respaldos/navidrome, fuera del repo (variables ND_BACKUP_PATH, ND_BACKUP_SCHEDULE y ND_BACKUP_COUNT). El respaldo del gateway es manual (docker compose exec gateway con la API de copia de SQLite) y está en C:\Respaldo-ChiriHome en el PC: repetirlo cuando se creen o cambien usuarios
 
 ## Rutas
 - Windows (PC y laptop): C:\ChiriHome
@@ -18,15 +18,16 @@
 
 ## Gateway (servidor/gateway)
 - Python 3.13 en Docker. Librerías con versión fijada: fastapi 0.136.3, uvicorn 0.52.4, httpx 0.28.1, argon2-cffi 25.1.0, PyJWT 2.13.0
-- Archivos: main.py (proxy y rutas), base_datos.py (SQLite), seguridad.py (hash, tokens, límite de intentos, caducidad), cli.py (gestión de usuarios)
+- Archivos: main.py (proxy y rutas), base_datos.py (SQLite), seguridad.py (hash, tokens, límite de intentos, caducidad), cli.py (gestión de usuarios por terminal), panel.html y panel.js (página de administración)
 - Rutas propias: POST /_gateway/login (devuelve token, válido 30 días), GET /_gateway/yo, GET /_gateway/salud
 - Toda otra ruta exige token (parámetro p de Subsonic o cabecera Authorization: Bearer). Sin token responde 401
 - Al reenviar, el gateway quita los parámetros p, t, s y la cabecera Authorization, borra cualquier Remote-User del cliente y añade Remote-User con el usuario de Navidrome vinculado
-- Navidrome solo confía en Remote-User si la petición viene de 10.77.0.10/32 (variables ND_EXTAUTH_TRUSTEDSOURCES y ND_REVERSEPROXYWHITELIST). Probado: desde otra IP la cabecera se ignora
+- Navidrome solo confía en Remote-User si la petición viene de 10.77.0.10/32 (variable ND_EXTAUTH_TRUSTEDSOURCES). Probado: desde otra IP la cabecera se ignora
 - Usuarios: roles admin y usuario, activar/desactivar, cambio de contraseña, vínculo con el usuario de Navidrome y fecha de caducidad (hasta el final del día, UTC). Cambiar la contraseña o desactivar invalida los tokens ya entregados
 - Límite de intentos de login: 5 fallidos por usuario y 20 por IP cada 15 minutos (429)
-- Gestión: docker compose exec gateway python cli.py crear | listar | activar | desactivar | clave | vincular | expira | borrar
-- La web de Navidrome ya no funciona a través del túnel (el navegador no manda el token). Para administrar: http://192.168.1.88:4533 en casa
+- Gestión por terminal: docker compose exec gateway python cli.py crear | listar | activar | desactivar | clave | vincular | expira | borrar
+- Administración por web: página en http://192.168.1.88:8000/_gateway/admin y API en /_gateway/admin/usuarios (listar, crear, modificar, borrar). Solo funciona desde la red local: si la petición llega por el túnel de Cloudflare responde 404 (variable ADMIN_SOLO_LAN, activa por defecto). Solo administradores; no puedes quitarte el rol, desactivarte ni borrarte a ti mismo, y siempre debe quedar un administrador activo. En la red local va por HTTP, así que la contraseña de administrador viaja sin cifrar: usarla solo en una red de confianza
+- La web de Navidrome ya no funciona a través del túnel (el navegador no manda el token). Para administrar Navidrome: http://192.168.1.88:4533 en casa
 
 ## App Android (app-android/ChiriMusic)
 - Kotlin, Jetpack Compose, Media3 1.10.0 (servicio de reproducción), Retrofit + kotlinx-serialization, Coil 3, Navigation Compose
@@ -37,32 +38,4 @@
   - data/ (modelos, SubsonicApi, Sesion, Favoritos, Playlists, DescargasLocal, Gateway, Letras)
   - player/ (Reproductor, ServicioReproduccion, CacheAudio, EcualizadorAudio, Descargas, ServicioDescargas, BibliotecaAuto)
   - ui/ (login, albumes, album, buscar, favoritos, cola, playlists, playlist, descargas, ecualizador, letra, componentes, reproductor, theme)
-- Login: la app llama a /_gateway/login, recibe el token y lo manda en el parámetro p de cada URL. La sesión guarda URL, usuario y token (no la contraseña) en almacenamiento privado, con allowBackup desactivado. Si el servidor responde 401, la app cierra la sesión y vuelve al login
-- Dirección del servidor: https://musica.chirihome.com (por defecto, también en casa). HTTP en claro solo para 192.168.1.88, y solo para pruebas, porque ahí el login viaja sin cifrar
-
-## Fase 4: cómo funciona
-- Caché de streaming: SimpleCache de 500 MB (cache/audio), clave de caché = id de la canción
-- Descargas offline: DownloadManager de Media3, caché aparte en files/descargas sin borrado automático; datos de cada canción en files/descargas.json (DescargasLocal). Botón en cada canción, en álbum y en playlist; pantalla Descargas
-- Ecualizador: android.media.audiofx.Equalizer enganchado al audioSessionId; ajustes guardados
-- Android Auto: ServicioReproduccion es un MediaLibraryService y BibliotecaAuto expone Álbumes, Playlists y Descargas. Código preparado, SIN PROBAR (falta el Desktop Head Unit)
-
-## Reproducción: aleatorio, repetir y letra
-- Repetir: no / lista / una (modo de repetición de Media3). Se guarda
-- Aleatorio: hecho a mano, no con el modo de Media3. El interruptor mezcla lo que falta por sonar y las listas nuevas empiezan por la canción tocada con el resto mezclado; el botón "Reproducir en aleatorio" (álbum y playlist) mezcla todo. Se guarda
-- Letra: pantalla que usa getLyricsBySongId de Navidrome (OpenSubsonic). Resalta la línea actual si la letra está sincronizada y salta al tocar una línea. Necesita conexión. Código preparado, Probado y funcionando
-
-## Decisiones
-- Todo gratuito
-- Música: Navidrome. Video: Jellyfin por Tailscale (Fase 7)
-- Gateway propio con FastAPI para usuarios y permisos (Fase 6), con la autenticación externa de Navidrome (Remote-User)
-- Bibliotecas por usuario: se usa el multi-biblioteca nativo de Navidrome (Settings → Libraries y Users). Cada biblioteca necesita su propia carpeta, sin solaparse con otra
-- Sin permiso de descargas offline en el gateway: las descargas usan la misma ruta que el streaming, así que no se puede imponer de verdad
-- Cloudflare: los términos del CDN restringen servir vídeo y archivos grandes alojados fuera de Cloudflare; para audio personal el riesgo es bajo pero sin garantía, por eso el vídeo irá por Tailscale
-
-## Fase actual
-- Fases 1 a 5 terminadas.
-- Fase 6: gateway funcionando con login, vínculo con Navidrome y cuentas con caducidad; faltan las bibliotecas por usuario (nativas de Navidrome) y el panel de administración.
-
-## Pendientes
-- Revisar si la imagen de Docker deluan/navidrome sigue actualizándose o hay que pasar a navidrome/navidrome
-- Panel de administración de usuarios (sin terminal)
+- Login: la app llama a /_gateway/login, recibe el token y lo manda en el parámetro p de cada URL. La sesión guarda URL, usuario y token (no la contraseña) en almacenamiento privado, con allowBackup
