@@ -1,6 +1,7 @@
 package com.chirihome.music.player
 
 import android.content.Intent
+import android.app.PendingIntent
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -15,6 +16,7 @@ import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
 import com.chirihome.music.data.Sesion
+import com.chirihome.music.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -63,7 +65,25 @@ class ServicioReproduccion : MediaLibraryService() {
             }
         })
 
-        sesion = MediaLibrarySession.Builder(this, player, BibliotecaAuto(scope)).build()
+        val intentActividad = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+
+        val pendingIntentActividad = PendingIntent.getActivity(
+            this,
+            0,
+            intentActividad,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        sesion = MediaLibrarySession.Builder(
+            this,
+            player,
+            BibliotecaAuto(scope)
+        )
+            .setSessionActivity(pendingIntentActividad)
+            .build()
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = sesion
