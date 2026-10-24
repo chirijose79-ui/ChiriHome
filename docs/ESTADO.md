@@ -60,15 +60,9 @@
 - Cloudflare: los términos del CDN restringen servir vídeo y archivos grandes alojados fuera de Cloudflare; para audio personal el riesgo es bajo pero sin garantía, por eso el vídeo irá por Tailscale
 
 ## Fase actual
-- Fases 1 a 3 y 5 terminadas.
-- Fase 4: caché, ecualizador y descargas terminados y probados; Android Auto pendiente de probar.
+- Fases 1 a 5 terminadas.
 - Fase 6: gateway funcionando con login, vínculo con Navidrome y cuentas con caducidad; faltan las bibliotecas por usuario (nativas de Navidrome) y el panel de administración.
-- App: aleatorio y repetir terminados y probados; letra terminada y probada.
 
 ## Pendientes
-- Fijar IP en el router
-- Corregir números de pista (Picard / Mp3tag)
-- Probar Android Auto con el Desktop Head Unit (las carátulas pueden no verse en el coche porque el servidor usaba HTTP; ahora el túnel es HTTPS)
-- Probar la pantalla de letra; si las canciones no tienen letra, añadirlas (archivos .lrc junto a la canción, etiquetas incrustadas o un plugin de Navidrome con LRCLIB)
 - Revisar si la imagen de Docker deluan/navidrome sigue actualizándose o hay que pasar a navidrome/navidrome
 - Panel de administración de usuarios (sin terminal)

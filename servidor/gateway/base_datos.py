@@ -18,6 +18,9 @@ CREATE TABLE IF NOT EXISTS usuarios (
 );
 """
 
+# Columnas que se pueden modificar con actualizar()
+COLUMNAS_EDITABLES = {"rol", "navidrome_usuario", "activo", "clave_hash", "expira"}
+
 
 @contextmanager
 def _conexion():
@@ -81,6 +84,44 @@ def crear(nombre, clave_hash, rol, navidrome_usuario, expira=None):
             "VALUES (?, ?, ?, ?, ?)",
             (nombre, clave_hash, rol, navidrome_usuario, expira),
         )
+
+
+def actualizar(nombre, campos):
+    """Modifica varios campos de un usuario en una sola operación."""
+    asignaciones = []
+    valores = []
+    for columna, valor in campos.items():
+        if columna not in COLUMNAS_EDITABLES:
+            raise ValueError(f"Columna no editable: {columna}")
+        asignaciones.append(f"{columna} = ?")
+        valores.append(valor)
+    if not asignaciones:
+        return True
+    # Cambiar la contraseña o activar/desactivar invalida los tokens ya entregados
+    if "clave_hash" in campos or "activo" in campos:
+        asignaciones.append("version_token = version_token + 1")
+    valores.append(nombre)
+    with _conexion() as con:
+        cur = con.execute(
+            f"UPDATE usuarios SET {', '.join(asignaciones)} WHERE nombre = ?",
+            valores,
+        )
+        return cur.rowcount > 0
+
+
+def contar_admins_activos(excepto=None):
+    with _conexion() as con:
+        if excepto:
+            fila = con.execute(
+                "SELECT COUNT(*) AS n FROM usuarios "
+                "WHERE rol = 'admin' AND activo = 1 AND nombre != ?",
+                (excepto,),
+            ).fetchone()
+        else:
+            fila = con.execute(
+                "SELECT COUNT(*) AS n FROM usuarios WHERE rol = 'admin' AND activo = 1"
+            ).fetchone()
+        return fila["n"]
 
 
 def fijar_activo(nombre, activo):

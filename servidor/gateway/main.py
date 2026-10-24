@@ -1,11 +1,14 @@
 import json
 import os
+import sqlite3
 from contextlib import asynccontextmanager
+from datetime import date
+from typing import Literal
 
 import anyio
 import httpx
 from anyio import to_thread
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -16,6 +19,12 @@ UPSTREAM = os.environ.get("UPSTREAM_URL", "http://navidrome:4533").rstrip("/")
 
 # Cabecera con la que Navidrome recibe el usuario ya autenticado
 HEADER_USUARIO = os.environ.get("NAVIDROME_USER_HEADER", "Remote-User").lower()
+
+# La administración solo funciona desde la red local, salvo que se desactive a propósito
+ADMIN_SOLO_LAN = os.environ.get("ADMIN_SOLO_LAN", "true").lower() != "false"
+
+# Cloudflare añade siempre estas cabeceras a lo que pasa por el túnel
+CABECERAS_CLOUDFLARE = ("cf-connecting-ip", "cf-ray")
 
 # Cabeceras que son de una sola conexión y no se reenvían
 HOP_BY_HOP = {
@@ -38,6 +47,9 @@ PARAMS_AUTH = {"p", "t", "s"}
 
 MAX_FALLOS_POR_USUARIO = 5
 MAX_FALLOS_POR_IP = 20
+
+PATRON_NOMBRE = r"^[A-Za-z0-9_.-]{3,32}$"
+PATRON_NAVIDROME = r"^[A-Za-z0-9_.@-]{1,64}$"
 
 limitador = seguridad.LimitadorIntentos()
 
@@ -66,6 +78,23 @@ app = FastAPI(
 class DatosLogin(BaseModel):
     usuario: str = Field(min_length=1, max_length=64)
     clave: str = Field(min_length=1, max_length=256)
+
+
+class UsuarioNuevo(BaseModel):
+    nombre: str = Field(pattern=PATRON_NOMBRE)
+    clave: str = Field(min_length=10, max_length=256)
+    rol: Literal["admin", "usuario"] = "usuario"
+    navidrome_usuario: str | None = Field(default=None, pattern=PATRON_NAVIDROME)
+    expira: date | None = None
+
+
+class UsuarioCambios(BaseModel):
+    rol: Literal["admin", "usuario"] | None = None
+    navidrome_usuario: str | None = Field(default=None, pattern=PATRON_NAVIDROME)
+    activo: bool | None = None
+    clave: str | None = Field(default=None, min_length=10, max_length=256)
+    # Enviar "expira": null quita la caducidad
+    expira: date | None = None
 
 
 def _ip(request: Request) -> str:
@@ -102,6 +131,32 @@ async def _usuario_actual(request: Request):
     ):
         return None
     return usuario
+
+
+async def _exigir_admin(request: Request) -> dict:
+    # Por el túnel de Cloudflare la administración no existe, aunque el token sea válido
+    if ADMIN_SOLO_LAN and any(request.headers.get(h) for h in CABECERAS_CLOUDFLARE):
+        raise HTTPException(status_code=404, detail="No encontrado")
+    usuario = await _usuario_actual(request)
+    if not usuario:
+        raise HTTPException(status_code=401, detail="Sesión no válida o caducada")
+    if usuario["rol"] != "admin":
+        raise HTTPException(status_code=403, detail="Solo para administradores")
+    return usuario
+
+
+def _publico(u: dict) -> dict:
+    # Nunca incluye el hash de la contraseña
+    return {
+        "id": u["id"],
+        "nombre": u["nombre"],
+        "rol": u["rol"],
+        "navidrome_usuario": u["navidrome_usuario"],
+        "activo": bool(u["activo"]),
+        "creado": u["creado"],
+        "expira": u["expira"],
+        "caducada": seguridad.caducada(u["expira"]),
+    }
 
 
 def _no_autorizado(ruta: str) -> Response:
@@ -185,6 +240,102 @@ async def yo(request: Request):
         "rol": usuario["rol"],
         "cuenta_expira": usuario.get("expira"),
     }
+
+
+# ---- Administración de usuarios (solo administradores, solo desde la red local) ----
+
+
+@app.get("/_gateway/admin/usuarios")
+async def admin_listar(admin: dict = Depends(_exigir_admin)):
+    usuarios = await to_thread.run_sync(base_datos.listar)
+    return [_publico(u) for u in usuarios]
+
+
+@app.post("/_gateway/admin/usuarios", status_code=201)
+async def admin_crear(datos: UsuarioNuevo, admin: dict = Depends(_exigir_admin)):
+    clave_hash = await to_thread.run_sync(seguridad.hashear, datos.clave)
+    expira = datos.expira.isoformat() if datos.expira else None
+    try:
+        await to_thread.run_sync(
+            base_datos.crear,
+            datos.nombre,
+            clave_hash,
+            datos.rol,
+            datos.navidrome_usuario or datos.nombre,
+            expira,
+        )
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail="Ya existe un usuario con ese nombre")
+    usuario = await to_thread.run_sync(base_datos.buscar_por_nombre, datos.nombre)
+    return _publico(usuario)
+
+
+@app.patch("/_gateway/admin/usuarios/{nombre}")
+async def admin_cambiar(
+    nombre: str, datos: UsuarioCambios, admin: dict = Depends(_exigir_admin)
+):
+    objetivo = await to_thread.run_sync(base_datos.buscar_por_nombre, nombre)
+    if not objetivo:
+        raise HTTPException(status_code=404, detail="No existe ese usuario")
+
+    enviados = datos.model_fields_set
+    campos = {}
+    if "rol" in enviados and datos.rol is not None:
+        campos["rol"] = datos.rol
+    if "navidrome_usuario" in enviados and datos.navidrome_usuario is not None:
+        campos["navidrome_usuario"] = datos.navidrome_usuario
+    if "activo" in enviados and datos.activo is not None:
+        campos["activo"] = 1 if datos.activo else 0
+    if "clave" in enviados and datos.clave is not None:
+        campos["clave_hash"] = await to_thread.run_sync(seguridad.hashear, datos.clave)
+    if "expira" in enviados:
+        campos["expira"] = datos.expira.isoformat() if datos.expira else None
+
+    # Protecciones para no quedarse sin administradores
+    deja_de_ser_admin_activo = objetivo["rol"] == "admin" and (
+        campos.get("rol") == "usuario" or campos.get("activo") == 0
+    )
+    if deja_de_ser_admin_activo:
+        if objetivo["id"] == admin["id"]:
+            raise HTTPException(
+                status_code=400,
+                detail="No puedes quitarte el rol de administrador ni desactivarte a ti mismo",
+            )
+        restantes = await to_thread.run_sync(
+            base_datos.contar_admins_activos, objetivo["nombre"]
+        )
+        if restantes == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Debe quedar al menos un administrador activo",
+            )
+
+    await to_thread.run_sync(base_datos.actualizar, objetivo["nombre"], campos)
+    actualizado = await to_thread.run_sync(base_datos.buscar_por_id, objetivo["id"])
+    return _publico(actualizado)
+
+
+@app.delete("/_gateway/admin/usuarios/{nombre}", status_code=204)
+async def admin_borrar(nombre: str, admin: dict = Depends(_exigir_admin)):
+    objetivo = await to_thread.run_sync(base_datos.buscar_por_nombre, nombre)
+    if not objetivo:
+        raise HTTPException(status_code=404, detail="No existe ese usuario")
+    if objetivo["id"] == admin["id"]:
+        raise HTTPException(status_code=400, detail="No puedes borrarte a ti mismo")
+    if objetivo["rol"] == "admin" and objetivo["activo"]:
+        restantes = await to_thread.run_sync(
+            base_datos.contar_admins_activos, objetivo["nombre"]
+        )
+        if restantes == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Debe quedar al menos un administrador activo",
+            )
+    await to_thread.run_sync(base_datos.borrar, objetivo["nombre"])
+    return Response(status_code=204)
+
+
+# ---- Reenvío a Navidrome ----
 
 
 @app.api_route(

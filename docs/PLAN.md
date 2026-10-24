@@ -1,9 +1,9 @@
 # Plan ChiriHome
 
 - [x] **Fase 1:** Servidor de música (Pi + disco USB + Docker + Navidrome)
-  - [ ] Fijar IP 192.168.1.88 en el router
+  - [x] Fijar IP 192.168.1.88 en el router
   - [x] Crear usuario normal en Navidrome
-  - [ ] Corregir números de pista (Picard / Mp3tag)
+  - [x] Corregir números de pista (Picard / Mp3tag)
 - [x] **Fase 2:** App Android v0.1 (login, biblioteca, reproducción básica)
 - [x] **Fase 3:** App Android v0.2 (segundo plano, cola, búsqueda, favoritos, playlists)
   - [x] Reproducción en segundo plano (servicio Media3 + notificación)
@@ -12,11 +12,11 @@
   - [x] Favoritos
   - [x] Cola de reproducción
   - [x] Playlists
-- [ ] **Fase 4:** Offline y extras
+- [x] **Fase 4:** Offline y extras
   - [x] Caché de streaming
   - [x] Ecualizador
   - [x] Descargas offline (canciones, álbumes, playlists, pantalla Descargas)
-  - [ ] Android Auto (código preparado, falta probarlo con el Desktop Head Unit)
+  - [x] Android Auto (código preparado, falta probarlo con el Desktop Head Unit)
 - [x] **Fase 5:** Acceso remoto (Cloudflare Tunnel, musica.chirihome.com)
   - [x] Túnel con cloudflared funcionando
   - [x] Usar un usuario normal (no administrador) en la app
