@@ -13,8 +13,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -85,7 +89,7 @@ private fun Contenido(playlist: PlaylistDetalle, alQuitar: (Int) -> Unit) {
                     OutlinedButton(
                         enabled = playlist.entry.isNotEmpty(),
                         onClick = { Reproductor.reproducirAleatorio(playlist.entry) }
-                    ) { Text("Aleatorio") }
+                    ) { Text("Reproducir en aleatorio") }
                 }
                 if (total > 0) {
                     TextButton(
@@ -134,7 +138,13 @@ private fun Contenido(playlist: PlaylistDetalle, alQuitar: (Int) -> Unit) {
                     )
                 }
                 BotonDescarga(cancion)
-                TextButton(onClick = { alQuitar(indice) }) { Text("Quitar") }
+                IconButton(onClick = { alQuitar(indice) }) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Quitar de la playlist",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 BotonFavorito(cancion)
             }
         }

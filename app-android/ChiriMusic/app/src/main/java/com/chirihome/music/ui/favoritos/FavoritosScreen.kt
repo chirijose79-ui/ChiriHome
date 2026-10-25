@@ -45,7 +45,7 @@ fun FavoritosScreen(modifier: Modifier = Modifier) {
                     Modifier.fillMaxSize().padding(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Aún no tienes canciones favoritas. Toca ♡ en una canción para agregarla.")
+                    Text("Aún no tienes canciones favoritas. Toca el corazón en una canción para agregarla.")
                 }
             } else {
                 LazyColumn(Modifier.fillMaxSize()) {

@@ -10,7 +10,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,22 +43,30 @@ fun DescargasScreen() {
     val todas = DescargasLocal.canciones.value
     val listas = todas.filter { Descargas.estadoDe(it.id) == EstadoDescarga.LISTA }
     val enCurso = todas.count { Descargas.estadoDe(it.id) == EstadoDescarga.EN_CURSO }
+    val hayAlgo = listas.isNotEmpty() || enCurso > 0
 
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
-                Text("Descargas", style = MaterialTheme.typography.headlineSmall)
-                Spacer(Modifier.height(4.dp))
-                val partes = mutableListOf(
-                    "${listas.size} canciones",
-                    formatoTamano(Descargas.espacioUsado(contexto))
-                )
-                if (enCurso > 0) partes.add("$enCurso descargando")
-                Text(partes.joinToString(" · "), style = MaterialTheme.typography.bodySmall)
-                TextButton(
-                    onClick = { confirmar = true },
-                    enabled = listas.isNotEmpty() || enCurso > 0
-                ) { Text("Borrar todas") }
+            Row(
+                Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, end = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Descargas", style = MaterialTheme.typography.headlineSmall)
+                    Spacer(Modifier.height(4.dp))
+                    val partes = mutableListOf(
+                        "${listas.size} canciones",
+                        formatoTamano(Descargas.espacioUsado(contexto))
+                    )
+                    if (enCurso > 0) partes.add("$enCurso descargando")
+                    Text(partes.joinToString(" · "), style = MaterialTheme.typography.bodySmall)
+                }
+                IconButton(onClick = { confirmar = true }, enabled = hayAlgo) {
+                    Icon(
+                        imageVector = Icons.Filled.DeleteSweep,
+                        contentDescription = "Borrar todas las descargas"
+                    )
+                }
             }
 
             if (listas.isEmpty()) {

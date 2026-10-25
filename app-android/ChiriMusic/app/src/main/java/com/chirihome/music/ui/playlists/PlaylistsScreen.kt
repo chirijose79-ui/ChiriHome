@@ -10,7 +10,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -49,7 +54,9 @@ fun PlaylistsScreen(alAbrir: (String) -> Unit, modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.weight(1f)
             )
-            TextButton(onClick = { creando = true }) { Text("Nueva") }
+            IconButton(onClick = { creando = true }) {
+                Icon(Icons.Filled.Add, contentDescription = "Nueva playlist")
+            }
         }
 
         Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -58,7 +65,7 @@ fun PlaylistsScreen(alAbrir: (String) -> Unit, modifier: Modifier = Modifier) {
                     Modifier.fillMaxSize().padding(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Aún no tienes playlists. Pulsa Nueva para crear una.")
+                    Text("Aún no tienes playlists. Toca el + de arriba para crear una.")
                 }
             } else {
                 LazyColumn(Modifier.fillMaxSize()) {
@@ -81,7 +88,13 @@ fun PlaylistsScreen(alAbrir: (String) -> Unit, modifier: Modifier = Modifier) {
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
-                            TextButton(onClick = { aBorrar = p }) { Text("Borrar") }
+                            IconButton(onClick = { aBorrar = p }) {
+                                Icon(
+                                    imageVector = Icons.Filled.Delete,
+                                    contentDescription = "Borrar playlist",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }

@@ -1,7 +1,6 @@
 package com.chirihome.music.ui.albumes
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,14 +15,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -46,19 +57,29 @@ fun AlbumesScreen(
     modifier: Modifier = Modifier,
     vm: AlbumesViewModel = viewModel()
 ) {
+    var confirmarSalir by remember { mutableStateOf(false) }
+
     Column(modifier.fillMaxSize()) {
         Row(
-            Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 4.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TextButton(onClick = alBuscar) { Text("Buscar") }
-            TextButton(onClick = alFavoritos) { Text("Favoritos") }
-            TextButton(onClick = alPlaylists) { Text("Playlists") }
-            TextButton(onClick = alDescargas) { Text("Descargas") }
-            TextButton(onClick = alSalir) { Text("Salir") }
+            IconButton(onClick = alBuscar) {
+                Icon(Icons.Filled.Search, contentDescription = "Buscar")
+            }
+            IconButton(onClick = alFavoritos) {
+                Icon(Icons.Filled.Favorite, contentDescription = "Favoritos")
+            }
+            IconButton(onClick = alPlaylists) {
+                Icon(Icons.AutoMirrored.Filled.PlaylistPlay, contentDescription = "Playlists")
+            }
+            IconButton(onClick = alDescargas) {
+                Icon(Icons.Filled.Download, contentDescription = "Descargas")
+            }
+            IconButton(onClick = { confirmarSalir = true }) {
+                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Cerrar sesión")
+            }
         }
 
         Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -89,6 +110,23 @@ fun AlbumesScreen(
         }
 
         MiniReproductor()
+    }
+
+    if (confirmarSalir) {
+        AlertDialog(
+            onDismissRequest = { confirmarSalir = false },
+            title = { Text("Cerrar sesión") },
+            text = { Text("Se detendrá la reproducción y tendrás que volver a entrar.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmarSalir = false
+                    alSalir()
+                }) { Text("Cerrar sesión") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmarSalir = false }) { Text("Cancelar") }
+            }
+        )
     }
 }
 

@@ -5,23 +5,134 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.filled.Lyrics
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
 import com.chirihome.music.player.Reproductor
 import com.chirihome.music.ui.Navegacion
 import com.chirihome.music.ui.componentes.BotonFavorito
+import kotlinx.coroutines.delay
+
+// estado: null = botón normal, true = activado (de color), false = apagado (atenuado)
+@Composable
+private fun BotonIcono(
+    icono: ImageVector,
+    descripcion: String,
+    alPulsar: () -> Unit,
+    estado: Boolean? = null,
+    tamano: Dp = 48.dp,
+    tamanoIcono: Dp = 24.dp
+) {
+    val color = when (estado) {
+        true -> MaterialTheme.colorScheme.primary
+        false -> LocalContentColor.current.copy(alpha = 0.5f)
+        null -> LocalContentColor.current
+    }
+    IconButton(onClick = alPulsar, modifier = Modifier.size(tamano)) {
+        Icon(
+            imageVector = icono,
+            contentDescription = descripcion,
+            modifier = Modifier.size(tamanoIcono),
+            tint = color
+        )
+    }
+}
+
+private fun formatoTiempo(ms: Long): String {
+    val segundos = (ms / 1000).coerceAtLeast(0)
+    return "%d:%02d".format(segundos / 60, segundos % 60)
+}
+
+// Línea de progreso: se puede tocar o arrastrar para saltar a otro momento
+@Composable
+private fun BarraProgreso(duracionNavidrome: Int?, idCancion: String) {
+    var posicion by remember { mutableLongStateOf(0L) }
+    var duracion by remember { mutableLongStateOf(0L) }
+    var arrastrando by remember { mutableStateOf(false) }
+    var valorArrastre by remember { mutableFloatStateOf(0f) }
+
+    // Se consulta cuatro veces por segundo; al cambiar de canción se reinicia
+    LaunchedEffect(idCancion) {
+        while (true) {
+            if (!arrastrando) posicion = Reproductor.posicionMs()
+            val real = Reproductor.duracionMs()
+            duracion = if (real > 0) real else (duracionNavidrome ?: 0) * 1000L
+            delay(250)
+        }
+    }
+
+    val maximo = duracion.coerceAtLeast(1L).toFloat()
+    val valor = (if (arrastrando) valorArrastre else posicion.toFloat()).coerceIn(0f, maximo)
+
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            formatoTiempo(valor.toLong()),
+            style = MaterialTheme.typography.bodySmall
+        )
+        Slider(
+            value = valor,
+            onValueChange = {
+                arrastrando = true
+                valorArrastre = it
+            },
+            onValueChangeFinished = {
+                val destino = valorArrastre.toLong()
+                Reproductor.irAPosicion(destino)
+                posicion = destino
+                arrastrando = false
+            },
+            valueRange = 0f..maximo,
+            enabled = duracion > 0,
+            modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+        )
+        Text(
+            formatoTiempo(duracion),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
 
 @Composable
 fun MiniReproductor(modifier: Modifier = Modifier, mostrarCola: Boolean = true) {
     val cancion = Reproductor.actual.value ?: return
+    val aleatorio = Reproductor.aleatorio.value
+    val modoRepetir = Reproductor.repetir.value
+    val sonando = Reproductor.sonando.value
+
     Column(modifier.fillMaxWidth()) {
         HorizontalDivider()
         Row(
@@ -42,42 +153,49 @@ fun MiniReproductor(modifier: Modifier = Modifier, mostrarCola: Boolean = true) 
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            if (mostrarCola) {
-                TextButton(onClick = { Navegacion.abrirEcualizador() }) { Text("EQ") }
-            }
             BotonFavorito(cancion)
         }
+        BarraProgreso(duracionNavidrome = cancion.duration, idCancion = cancion.id)
         Row(
             Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            TextButton(onClick = { Reproductor.anterior() }) { Text("Anterior") }
-            TextButton(onClick = { Reproductor.alternar() }) {
-                Text(if (Reproductor.sonando.value) "Pausa" else "Play")
-            }
-            TextButton(onClick = { Reproductor.siguiente() }) { Text("Siguiente") }
-            if (mostrarCola) {
-                TextButton(onClick = { Navegacion.abrirCola() }) { Text("Cola") }
-            }
+            BotonIcono(
+                icono = Icons.Filled.Shuffle,
+                descripcion = if (aleatorio) "Aleatorio activado" else "Aleatorio desactivado",
+                alPulsar = { Reproductor.alternarAleatorio() },
+                estado = aleatorio
+            )
+            BotonIcono(Icons.Filled.SkipPrevious, "Anterior", { Reproductor.anterior() })
+            BotonIcono(
+                icono = if (sonando) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                descripcion = if (sonando) "Pausa" else "Reproducir",
+                alPulsar = { Reproductor.alternar() },
+                tamano = 56.dp,
+                tamanoIcono = 36.dp
+            )
+            BotonIcono(Icons.Filled.SkipNext, "Siguiente", { Reproductor.siguiente() })
+            BotonIcono(
+                icono = if (modoRepetir == Player.REPEAT_MODE_ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+                descripcion = when (modoRepetir) {
+                    Player.REPEAT_MODE_ALL -> "Repetir lista"
+                    Player.REPEAT_MODE_ONE -> "Repetir una canción"
+                    else -> "Repetir desactivado"
+                },
+                alPulsar = { Reproductor.alternarRepetir() },
+                estado = modoRepetir != Player.REPEAT_MODE_OFF
+            )
         }
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            TextButton(onClick = { Reproductor.alternarAleatorio() }) {
-                Text(if (Reproductor.aleatorio.value) "Aleatorio: sí" else "Aleatorio: no")
-            }
-            TextButton(onClick = { Reproductor.alternarRepetir() }) {
-                Text(
-                    when (Reproductor.repetir.value) {
-                        Player.REPEAT_MODE_ALL -> "Repetir: lista"
-                        Player.REPEAT_MODE_ONE -> "Repetir: una"
-                        else -> "Repetir: no"
-                    }
-                )
-            }
-            if (mostrarCola) {
-                TextButton(onClick = { Navegacion.abrirLetra() }) { Text("Letra") }
+        if (mostrarCola) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BotonIcono(Icons.AutoMirrored.Filled.QueueMusic, "Cola", { Navegacion.abrirCola() })
+                BotonIcono(Icons.Filled.Lyrics, "Letra", { Navegacion.abrirLetra() })
+                BotonIcono(Icons.Filled.Equalizer, "Ecualizador", { Navegacion.abrirEcualizador() })
             }
         }
     }

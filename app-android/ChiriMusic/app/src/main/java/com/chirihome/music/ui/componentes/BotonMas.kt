@@ -7,9 +7,14 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -35,15 +40,16 @@ fun BotonMas(cancion: Cancion, modifier: Modifier = Modifier) {
 
     Box(modifier) {
         IconButton(onClick = { menu = true }) {
-            Text(
-                "⋮",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            Icon(
+                imageVector = Icons.Filled.MoreVert,
+                contentDescription = "Más opciones",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
             DropdownMenuItem(
                 text = { Text("Agregar a la cola") },
+                leadingIcon = { Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null) },
                 onClick = {
                     menu = false
                     Reproductor.agregarAlFinal(cancion)
@@ -52,6 +58,7 @@ fun BotonMas(cancion: Cancion, modifier: Modifier = Modifier) {
             )
             DropdownMenuItem(
                 text = { Text("Agregar a playlist") },
+                leadingIcon = { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = null) },
                 onClick = {
                     menu = false
                     Playlists.cargar()
