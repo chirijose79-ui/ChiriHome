@@ -5,11 +5,14 @@ import android.os.Bundle
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService.LibraryParams
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import com.chirihome.music.data.Cancion
 import com.chirihome.music.data.DescargasLocal
 import com.chirihome.music.data.Sesion
@@ -24,13 +27,19 @@ import kotlinx.coroutines.launch
 @OptIn(UnstableApi::class)
 class BibliotecaAuto(private val scope: CoroutineScope) : MediaLibrarySession.Callback {
 
-    private companion object {
-        const val RAIZ = "raiz"
-        const val ALBUMES = "albumes"
-        const val PLAYLISTS = "playlists"
-        const val DESCARGAS = "descargas"
-        const val PREFIJO_ALBUM = "album:"
-        const val PREFIJO_PLAYLIST = "playlist:"
+    companion object {
+        private const val RAIZ = "raiz"
+        private const val ALBUMES = "albumes"
+        private const val PLAYLISTS = "playlists"
+        private const val DESCARGAS = "descargas"
+        private const val PREFIJO_ALBUM = "album:"
+        private const val PREFIJO_PLAYLIST = "playlist:"
+
+        // Botones de la pantalla de bloqueo, de la notificación y de Android Auto
+        private const val ACCION_ALEATORIO = "ACCION_ALEATORIO"
+        private const val ACCION_REPETIR = "ACCION_REPETIR"
+        val COMANDO_ALEATORIO = SessionCommand(ACCION_ALEATORIO, Bundle.EMPTY)
+        val COMANDO_REPETIR = SessionCommand(ACCION_REPETIR, Bundle.EMPTY)
     }
 
     // Canciones vistas al navegar: sirven para completar los datos cuando el coche pide una por su id
@@ -38,6 +47,47 @@ class BibliotecaAuto(private val scope: CoroutineScope) : MediaLibrarySession.Ca
 
     // Última lista de canciones abierta en el coche: al tocar una, se encola toda
     private var ultimaLista: List<Cancion> = emptyList()
+
+    // Se aceptan los comandos personalizados para que los botones funcionen
+    override fun onConnect(
+        session: MediaSession,
+        controller: MediaSession.ControllerInfo
+    ): MediaSession.ConnectionResult {
+        val comandos = MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS
+            .buildUpon()
+            .add(COMANDO_ALEATORIO)
+            .add(COMANDO_REPETIR)
+            .build()
+        return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+            .setAvailableSessionCommands(comandos)
+            .build()
+    }
+
+    override fun onCustomCommand(
+        session: MediaSession,
+        controller: MediaSession.ControllerInfo,
+        customCommand: SessionCommand,
+        args: Bundle
+    ): ListenableFuture<SessionResult> {
+        val reproductor = session.player
+        return when (customCommand.customAction) {
+            ACCION_ALEATORIO -> {
+                Reproductor.alternarAleatorioEnSesion(reproductor)
+                Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+            }
+
+            ACCION_REPETIR -> {
+                reproductor.repeatMode = when (reproductor.repeatMode) {
+                    Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                    Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                    else -> Player.REPEAT_MODE_OFF
+                }
+                Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+            }
+
+            else -> Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
+        }
+    }
 
     override fun onGetLibraryRoot(
         session: MediaLibrarySession,

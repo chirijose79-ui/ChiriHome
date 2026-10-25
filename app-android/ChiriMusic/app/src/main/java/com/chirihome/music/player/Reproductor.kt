@@ -33,14 +33,34 @@ object Reproductor {
     // Player.REPEAT_MODE_OFF, REPEAT_MODE_ALL o REPEAT_MODE_ONE
     val repetir = mutableStateOf(Player.REPEAT_MODE_OFF)
 
+    // El servicio lo usa para actualizar los botones de la pantalla de bloqueo
+    var alCambiarAjustes: () -> Unit = {}
+
+    // Carga lo guardado una sola vez. Lo llaman la app y el servicio de reproducción
+    fun cargarAjustes(contexto: Context) {
+        if (prefs != null) return
+        val p = contexto.applicationContext.getSharedPreferences("reproductor", Context.MODE_PRIVATE)
+        prefs = p
+        aleatorio.value = p.getBoolean("aleatorio", false)
+        repetir.value = p.getInt("repetir", Player.REPEAT_MODE_OFF)
+    }
+
+    private fun fijarAleatorio(valor: Boolean) {
+        aleatorio.value = valor
+        prefs?.edit()?.putBoolean("aleatorio", valor)?.apply()
+        alCambiarAjustes()
+    }
+
+    // Se llama cada vez que el modo de repetición cambia, venga de donde venga
+    fun registrarRepetir(modo: Int) {
+        repetir.value = modo
+        prefs?.edit()?.putInt("repetir", modo)?.apply()
+        alCambiarAjustes()
+    }
+
     fun iniciar(contexto: Context) {
         val app = contexto.applicationContext
-        if (prefs == null) {
-            val p = app.getSharedPreferences("reproductor", Context.MODE_PRIVATE)
-            prefs = p
-            aleatorio.value = p.getBoolean("aleatorio", false)
-            repetir.value = p.getInt("repetir", Player.REPEAT_MODE_OFF)
-        }
+        cargarAjustes(app)
         if (controlador != null || conectando) return
         conectando = true
         val token = SessionToken(app, ComponentName(app, ServicioReproduccion::class.java))
@@ -64,8 +84,7 @@ object Reproductor {
                     }
 
                     override fun onRepeatModeChanged(repeatMode: Int) {
-                        repetir.value = repeatMode
-                        prefs?.edit()?.putInt("repetir", repeatMode)?.apply()
+                        registrarRepetir(repeatMode)
                     }
                 })
                 // El servicio puede haberse reiniciado: se vuelve a aplicar lo guardado
@@ -102,11 +121,18 @@ object Reproductor {
         c.play()
     }
 
+    // Desde la app
     fun alternarAleatorio() {
         val nuevo = !aleatorio.value
-        aleatorio.value = nuevo
-        prefs?.edit()?.putBoolean("aleatorio", nuevo)?.apply()
+        fijarAleatorio(nuevo)
         if (nuevo) mezclarPendientes()
+    }
+
+    // Desde el botón de la pantalla de bloqueo: se trabaja directamente sobre el reproductor del servicio
+    fun alternarAleatorioEnSesion(reproductor: Player) {
+        val nuevo = !aleatorio.value
+        fijarAleatorio(nuevo)
+        if (nuevo) mezclarPendientesEn(reproductor)
     }
 
     fun alternarRepetir() {
@@ -127,6 +153,18 @@ object Reproductor {
         val pendientes = lista.drop(actualIndice + 1).shuffled()
         c.removeMediaItems(actualIndice + 1, lista.size)
         c.addMediaItems(pendientes.map { aItem(it) })
+    }
+
+    // Lo mismo, pero sobre el reproductor del servicio, que conserva las direcciones de cada canción
+    private fun mezclarPendientesEn(reproductor: Player) {
+        val actualIndice = reproductor.currentMediaItemIndex
+        val total = reproductor.mediaItemCount
+        if (actualIndice < 0 || total - actualIndice <= 2) return
+        val pendientes = (actualIndice + 1 until total)
+            .map { reproductor.getMediaItemAt(it) }
+            .shuffled()
+        reproductor.removeMediaItems(actualIndice + 1, total)
+        reproductor.addMediaItems(pendientes)
     }
 
     fun agregarAlFinal(cancion: Cancion) {
