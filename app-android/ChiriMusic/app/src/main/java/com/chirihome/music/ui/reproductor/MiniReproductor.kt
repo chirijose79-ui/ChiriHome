@@ -1,6 +1,8 @@
 package com.chirihome.music.ui.reproductor
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,15 +36,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
+import coil3.compose.AsyncImage
+import com.chirihome.music.data.Sesion
 import com.chirihome.music.player.Reproductor
 import com.chirihome.music.ui.Navegacion
 import com.chirihome.music.ui.componentes.BotonFavorito
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 // estado: null = botón normal, true = activado (de color), false = apagado (atenuado)
 @Composable
@@ -70,8 +77,10 @@ private fun BotonIcono(
 }
 
 private fun formatoTiempo(ms: Long): String {
-    val segundos = (ms / 1000).coerceAtLeast(0)
-    return "%d:%02d".format(segundos / 60, segundos % 60)
+    val segundos = (ms / 1000).coerceAtLeast(0L)
+    val minutos = segundos / 60
+    val segundosRestantes = segundos % 60
+    return "%d:%02d".format(minutos, segundosRestantes)
 }
 
 // Línea de progreso: se puede tocar o arrastrar para saltar a otro momento
@@ -88,7 +97,7 @@ private fun BarraProgreso(duracionNavidrome: Int?, idCancion: String) {
             if (!arrastrando) posicion = Reproductor.posicionMs()
             val real = Reproductor.duracionMs()
             duracion = if (real > 0) real else (duracionNavidrome ?: 0) * 1000L
-            delay(250)
+            delay(250.milliseconds)
         }
     }
 
@@ -130,72 +139,90 @@ private fun BarraProgreso(duracionNavidrome: Int?, idCancion: String) {
 fun MiniReproductor(modifier: Modifier = Modifier, mostrarCola: Boolean = true) {
     val cancion = Reproductor.actual.value ?: return
     val aleatorio = Reproductor.aleatorio.value
-    val modoRepetir = Reproductor.repetir.value
+    val modoRepetir = Reproductor.repetir.intValue
     val sonando = Reproductor.sonando.value
 
-    Column(modifier.fillMaxWidth()) {
-        HorizontalDivider()
-        Row(
-            Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    cancion.title ?: "Sin título",
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    cancion.artist ?: "",
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+    Box(modifier.fillMaxWidth()) {
+        // Fondo: la carátula en tamaño diminuto, ampliada y difuminada
+        cancion.coverArt?.let { caratula ->
+            AsyncImage(
+                model = Sesion.urlCaratula(caratula, 64),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize().blur(16.dp)
+            )
+        }
+        // Velo del color del tema para que los textos y los iconos se lean bien
+        Box(
+            Modifier
+                .matchParentSize()
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
+        )
+
+        Column(Modifier.fillMaxWidth()) {
+            HorizontalDivider()
+            Row(
+                Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        cancion.title ?: "Sin título",
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        cancion.artist ?: "",
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                BotonFavorito(cancion)
             }
-            BotonFavorito(cancion)
-        }
-        BarraProgreso(duracionNavidrome = cancion.duration, idCancion = cancion.id)
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            BotonIcono(
-                icono = Icons.Filled.Shuffle,
-                descripcion = if (aleatorio) "Aleatorio activado" else "Aleatorio desactivado",
-                alPulsar = { Reproductor.alternarAleatorio() },
-                estado = aleatorio
-            )
-            BotonIcono(Icons.Filled.SkipPrevious, "Anterior", { Reproductor.anterior() })
-            BotonIcono(
-                icono = if (sonando) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                descripcion = if (sonando) "Pausa" else "Reproducir",
-                alPulsar = { Reproductor.alternar() },
-                tamano = 56.dp,
-                tamanoIcono = 36.dp
-            )
-            BotonIcono(Icons.Filled.SkipNext, "Siguiente", { Reproductor.siguiente() })
-            BotonIcono(
-                icono = if (modoRepetir == Player.REPEAT_MODE_ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
-                descripcion = when (modoRepetir) {
-                    Player.REPEAT_MODE_ALL -> "Repetir lista"
-                    Player.REPEAT_MODE_ONE -> "Repetir una canción"
-                    else -> "Repetir desactivado"
-                },
-                alPulsar = { Reproductor.alternarRepetir() },
-                estado = modoRepetir != Player.REPEAT_MODE_OFF
-            )
-        }
-        if (mostrarCola) {
+            BarraProgreso(duracionNavidrome = cancion.duration, idCancion = cancion.id)
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                BotonIcono(Icons.AutoMirrored.Filled.QueueMusic, "Cola", { Navegacion.abrirCola() })
-                BotonIcono(Icons.Filled.Lyrics, "Letra", { Navegacion.abrirLetra() })
-                BotonIcono(Icons.Filled.Equalizer, "Ecualizador", { Navegacion.abrirEcualizador() })
+                BotonIcono(
+                    icono = Icons.Filled.Shuffle,
+                    descripcion = if (aleatorio) "Aleatorio activado" else "Aleatorio desactivado",
+                    alPulsar = { Reproductor.alternarAleatorio() },
+                    estado = aleatorio
+                )
+                BotonIcono(Icons.Filled.SkipPrevious, "Anterior", { Reproductor.anterior() })
+                BotonIcono(
+                    icono = if (sonando) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    descripcion = if (sonando) "Pausa" else "Reproducir",
+                    alPulsar = { Reproductor.alternar() },
+                    tamano = 56.dp,
+                    tamanoIcono = 36.dp
+                )
+                BotonIcono(Icons.Filled.SkipNext, "Siguiente", { Reproductor.siguiente() })
+                BotonIcono(
+                    icono = if (modoRepetir == Player.REPEAT_MODE_ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+                    descripcion = when (modoRepetir) {
+                        Player.REPEAT_MODE_ALL -> "Repetir lista"
+                        Player.REPEAT_MODE_ONE -> "Repetir una canción"
+                        else -> "Repetir desactivado"
+                    },
+                    alPulsar = { Reproductor.alternarRepetir() },
+                    estado = modoRepetir != Player.REPEAT_MODE_OFF
+                )
+            }
+            if (mostrarCola) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    BotonIcono(Icons.AutoMirrored.Filled.QueueMusic, "Cola", { Navegacion.abrirCola() })
+                    BotonIcono(Icons.Filled.Lyrics, "Letra", { Navegacion.abrirLetra() })
+                    BotonIcono(Icons.Filled.Equalizer, "Ecualizador", { Navegacion.abrirEcualizador() })
+                }
             }
         }
     }

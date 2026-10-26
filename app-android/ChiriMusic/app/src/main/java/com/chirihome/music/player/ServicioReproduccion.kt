@@ -62,7 +62,7 @@ class ServicioReproduccion : MediaLibraryService() {
             .build()
 
         // Se aplica el modo de repetición guardado, aunque la app no esté abierta
-        player.repeatMode = Reproductor.repetir.value
+        player.repeatMode = Reproductor.repetir.intValue
 
         EcualizadorAudio.conectar(this, player.audioSessionId)
         player.addListener(object : Player.Listener {
