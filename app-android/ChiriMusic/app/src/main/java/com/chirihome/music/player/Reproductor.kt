@@ -1,12 +1,16 @@
 package com.chirihome.music.player
 
+import androidx.core.net.toUri
 import android.content.ComponentName
 import android.content.Context
 import android.content.SharedPreferences
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.core.content.edit
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -17,6 +21,7 @@ import androidx.media3.session.SessionToken
 import com.chirihome.music.data.Cancion
 import com.chirihome.music.data.Sesion
 
+@OptIn(UnstableApi::class)
 object Reproductor {
     private var controlador: MediaController? = null
     private var conectando = false
@@ -25,13 +30,13 @@ object Reproductor {
     val actual = mutableStateOf<Cancion?>(null)
     val sonando = mutableStateOf(false)
     val cola = mutableStateOf<List<Cancion>>(emptyList())
-    val indiceActual = mutableStateOf(-1)
+    val indiceActual = mutableIntStateOf(-1)
 
     // Aleatorio: se aplica a las listas que se empiezan y mezcla lo que falta por sonar
     val aleatorio = mutableStateOf(false)
 
     // Player.REPEAT_MODE_OFF, REPEAT_MODE_ALL o REPEAT_MODE_ONE
-    val repetir = mutableStateOf(Player.REPEAT_MODE_OFF)
+    val repetir = mutableIntStateOf(Player.REPEAT_MODE_OFF)
 
     // El servicio lo usa para actualizar los botones de la pantalla de bloqueo
     var alCambiarAjustes: () -> Unit = {}
@@ -42,19 +47,23 @@ object Reproductor {
         val p = contexto.applicationContext.getSharedPreferences("reproductor", Context.MODE_PRIVATE)
         prefs = p
         aleatorio.value = p.getBoolean("aleatorio", false)
-        repetir.value = p.getInt("repetir", Player.REPEAT_MODE_OFF)
+        repetir.intValue = p.getInt("repetir", Player.REPEAT_MODE_OFF)
     }
 
     private fun fijarAleatorio(valor: Boolean) {
         aleatorio.value = valor
-        prefs?.edit()?.putBoolean("aleatorio", valor)?.apply()
+        prefs?.edit {
+            putBoolean("aleatorio", valor)
+        }
         alCambiarAjustes()
     }
 
     // Se llama cada vez que el modo de repetición cambia, venga de donde venga
     fun registrarRepetir(modo: Int) {
-        repetir.value = modo
-        prefs?.edit()?.putInt("repetir", modo)?.apply()
+        repetir.intValue = modo
+        prefs?.edit {
+            putInt("repetir", modo)
+        }
         alCambiarAjustes()
     }
 
@@ -88,7 +97,7 @@ object Reproductor {
                     }
                 })
                 // El servicio puede haberse reiniciado: se vuelve a aplicar lo guardado
-                c.repeatMode = repetir.value
+                c.repeatMode = repetir.intValue
                 sonando.value = c.isPlaying
                 refrescarCola()
             } catch (e: Exception) {
@@ -216,16 +225,17 @@ object Reproductor {
         }
         actual.value = null
         cola.value = emptyList()
-        indiceActual.value = -1
+        indiceActual.intValue = -1
     }
 
     private fun refrescarCola() {
         val c = controlador ?: return
         cola.value = (0 until c.mediaItemCount).map { c.getMediaItemAt(it).aCancion() }
-        indiceActual.value = if (c.mediaItemCount == 0) -1 else c.currentMediaItemIndex
+        indiceActual.intValue = if (c.mediaItemCount == 0) -1 else c.currentMediaItemIndex
         actual.value = c.currentMediaItem?.aCancion()
     }
 
+    @OptIn(UnstableApi::class)
     private fun aItem(cancion: Cancion): MediaItem {
         val extras = Bundle().apply { putString("coverArt", cancion.coverArt) }
         return MediaItem.Builder()
@@ -237,7 +247,7 @@ object Reproductor {
                     .setTitle(cancion.title)
                     .setArtist(cancion.artist)
                     .setAlbumTitle(cancion.album)
-                    .setArtworkUri(cancion.coverArt?.let { Uri.parse(Sesion.urlCaratula(it, 512)) })
+                    .setArtworkUri(cancion.coverArt?.let { Sesion.urlCaratula(it, 512).toUri() })
                     .setExtras(extras)
                     .build()
             )

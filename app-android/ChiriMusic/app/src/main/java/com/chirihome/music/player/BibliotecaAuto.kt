@@ -1,6 +1,5 @@
 package com.chirihome.music.player
 
-import android.net.Uri
 import android.os.Bundle
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
@@ -13,6 +12,8 @@ import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
+import androidx.media3.session.SessionError
+import androidx.core.net.toUri
 import com.chirihome.music.data.Cancion
 import com.chirihome.music.data.DescargasLocal
 import com.chirihome.music.data.Sesion
@@ -85,7 +86,7 @@ class BibliotecaAuto(private val scope: CoroutineScope) : MediaLibrarySession.Ca
                 Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
             }
 
-            else -> Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
+            else -> Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
         }
     }
 
@@ -104,17 +105,17 @@ class BibliotecaAuto(private val scope: CoroutineScope) : MediaLibrarySession.Ca
         pageSize: Int,
         params: LibraryParams?
     ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> =
-        asincrono<LibraryResult<ImmutableList<MediaItem>>> {
+        asincrono {
             try {
                 val hijos = hijos(parentId)
                 if (hijos == null) {
-                    LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE)
+                    LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
                 } else {
                     val desde = (page.toLong() * pageSize).coerceAtMost(hijos.size.toLong()).toInt()
                     LibraryResult.ofItemList(hijos.drop(desde).take(pageSize), params)
                 }
-            } catch (e: Exception) {
-                LibraryResult.ofError(LibraryResult.RESULT_ERROR_IO)
+            } catch (_: Exception) {
+                LibraryResult.ofError(SessionError.ERROR_IO)
             }
         }
 
@@ -132,7 +133,7 @@ class BibliotecaAuto(private val scope: CoroutineScope) : MediaLibrarySession.Ca
         }
         val resultado: LibraryResult<MediaItem> =
             if (item != null) LibraryResult.ofItem(item, null)
-            else LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE)
+            else LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
         return Futures.immediateFuture(resultado)
     }
 
@@ -263,7 +264,7 @@ class BibliotecaAuto(private val scope: CoroutineScope) : MediaLibrarySession.Ca
                 MediaMetadata.Builder()
                     .setTitle(titulo)
                     .setSubtitle(subtitulo)
-                    .setArtworkUri(caratula?.let { Uri.parse(Sesion.urlCaratula(it, 300)) })
+                    .setArtworkUri(caratula?.let { Sesion.urlCaratula(it, 300).toUri() })
                     .setIsBrowsable(true)
                     .setIsPlayable(false)
                     .setMediaType(tipo)
@@ -282,7 +283,7 @@ class BibliotecaAuto(private val scope: CoroutineScope) : MediaLibrarySession.Ca
                     .setTitle(cancion.title)
                     .setArtist(cancion.artist)
                     .setAlbumTitle(cancion.album)
-                    .setArtworkUri(cancion.coverArt?.let { Uri.parse(Sesion.urlCaratula(it, 512)) })
+                    .setArtworkUri(cancion.coverArt?.let { Sesion.urlCaratula(it, 512).toUri() })
                     .setExtras(extras)
                     .setIsBrowsable(false)
                     .setIsPlayable(true)
