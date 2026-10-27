@@ -20,7 +20,7 @@ object Playlists {
         try {
             val r = api.playlists(Sesion.parametros()).respuesta
             if (r.status == "ok") lista.value = r.playlists?.playlist.orEmpty()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Sin conexión: se deja lo que había
         }
     }
@@ -38,7 +38,7 @@ object Playlists {
         scope.launch {
             val ok = try {
                 accion(api).respuesta.status == "ok"
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 false
             }
             recargar()

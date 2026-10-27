@@ -28,7 +28,7 @@ object DescargasLocal {
 
     fun agregar(cancion: Cancion) {
         if (canciones.value.any { it.id == cancion.id }) return
-        canciones.value = canciones.value + cancion
+        canciones.value += cancion
         guardar()
     }
 

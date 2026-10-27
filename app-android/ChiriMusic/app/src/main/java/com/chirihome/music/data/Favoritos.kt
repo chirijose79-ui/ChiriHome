@@ -26,7 +26,7 @@ object Favoritos {
                 canciones.value = lista
                 ids.value = lista.map { it.id }.toSet()
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Sin conexión: se deja lo que había
         }
     }
@@ -41,7 +41,7 @@ object Favoritos {
             try {
                 val p = Sesion.parametros() + ("id" to cancion.id)
                 if (eraFavorita) api.quitarFavorito(p) else api.agregarFavorito(p)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Si falla, la recarga siguiente devuelve el estado real
             }
             recargar()

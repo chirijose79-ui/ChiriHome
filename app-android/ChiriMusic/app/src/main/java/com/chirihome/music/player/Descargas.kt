@@ -4,7 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.annotation.OptIn
 import androidx.compose.runtime.mutableStateOf
 import androidx.media3.common.util.UnstableApi
@@ -26,6 +26,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.Executors
@@ -93,7 +94,7 @@ object Descargas {
                 download: Download,
                 finalException: Exception?
             ) {
-                estados.value = estados.value + (download.request.id to download.state)
+                estados.value += download.request.id to download.state
                 if (download.state == Download.STATE_DOWNLOADING ||
                     download.state == Download.STATE_QUEUED
                 ) {
@@ -103,8 +104,8 @@ object Descargas {
 
             override fun onDownloadRemoved(downloadManager: DownloadManager, download: Download) {
                 val id = download.request.id
-                estados.value = estados.value - id
-                progreso.value = progreso.value - id
+                estados.value -= id
+                progreso.value -= id
                 DescargasLocal.quitar(id)
             }
         })
@@ -143,7 +144,7 @@ object Descargas {
                             it.state == Download.STATE_RESTARTING
                 }
                 if (!activas) break
-                delay(1000)
+                delay(1000.milliseconds)
             }
         }
     }
@@ -196,7 +197,7 @@ object Descargas {
         val app = contexto.applicationContext
         administrador(app)
         DescargasLocal.agregar(cancion)
-        val peticion = DownloadRequest.Builder(cancion.id, Uri.parse(Sesion.urlStream(cancion.id)))
+        val peticion = DownloadRequest.Builder(cancion.id, Sesion.urlStream(cancion.id).toUri())
             .setCustomCacheKey(cancion.id)
             .build()
         DownloadService.sendAddDownload(app, ServicioDescargas::class.java, peticion, false)
