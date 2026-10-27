@@ -41,6 +41,22 @@ services:
       chirihome:
         ipv4_address: 10.77.0.10
 
+  jellyfin:
+    image: jellyfin/jellyfin:10.11.11
+    container_name: jellyfin
+    user: 1000:1000
+    restart: unless-stopped
+    ports:
+      - "8096:8096/tcp"
+      # Permite que las apps de Jellyfin encuentren el servidor solas dentro de tu red
+      - "7359:7359/udp"
+    environment:
+      JELLYFIN_PublishedServerUrl: http://192.168.1.88:8096
+    volumes:
+      - /home/chiri/jellyfin/config:/config
+      - /home/chiri/jellyfin/cache:/cache
+      - /mnt/biblioteca/video:/media:ro
+
 networks:
   chirihome:
     driver: bridge
