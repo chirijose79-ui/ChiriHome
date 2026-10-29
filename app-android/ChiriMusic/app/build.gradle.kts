@@ -58,10 +58,11 @@ dependencies {
     implementation(libs.okhttp.logging)
     implementation(libs.kotlinx.serialization.json)
 
-    // Reproducción de audio
+    // Reproducción de audio y video
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.datasource.okhttp)
+    implementation(libs.androidx.media3.ui)
 
     // Carátulas
     implementation(libs.coil.compose)

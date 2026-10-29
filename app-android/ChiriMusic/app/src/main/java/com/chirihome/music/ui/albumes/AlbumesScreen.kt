@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -53,6 +54,7 @@ fun AlbumesScreen(
     alFavoritos: () -> Unit,
     alPlaylists: () -> Unit,
     alDescargas: () -> Unit,
+    alVideo: () -> Unit,
     alSalir: () -> Unit,
     modifier: Modifier = Modifier,
     vm: AlbumesViewModel = viewModel()
@@ -76,6 +78,9 @@ fun AlbumesScreen(
             }
             IconButton(onClick = alDescargas) {
                 Icon(Icons.Filled.Download, contentDescription = "Descargas")
+            }
+            IconButton(onClick = alVideo) {
+                Icon(Icons.Filled.Movie, contentDescription = "Video")
             }
             IconButton(onClick = { confirmarSalir = true }) {
                 Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Cerrar sesión")
@@ -116,7 +121,7 @@ fun AlbumesScreen(
         AlertDialog(
             onDismissRequest = { confirmarSalir = false },
             title = { Text("Cerrar sesión") },
-            text = { Text("Se detendrá la reproducción y tendrás que volver a entrar.") },
+            text = { Text("Se detendrá la reproducción y tendrás que volver a entrar. También se cerrará la sesión de video.") },
             confirmButton = {
                 TextButton(onClick = {
                     confirmarSalir = false
