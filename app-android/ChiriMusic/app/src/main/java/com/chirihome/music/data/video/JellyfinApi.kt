@@ -3,6 +3,7 @@ package com.chirihome.music.data.video
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import retrofit2.http.Body
@@ -32,6 +33,16 @@ interface JellyfinApi {
         @Query("ids") ids: String,
         @Query("fields") campos: String = "Overview,MediaSources"
     ): JfItems
+
+    // Seguimiento de la reproducción: el servidor guarda por dónde vas
+    @POST("Sessions/Playing")
+    suspend fun reportarInicio(@Body datos: JfEstadoReproduccion): Response<Unit>
+
+    @POST("Sessions/Playing/Progress")
+    suspend fun reportarProgreso(@Body datos: JfEstadoReproduccion): Response<Unit>
+
+    @POST("Sessions/Playing/Stopped")
+    suspend fun reportarFin(@Body datos: JfFinReproduccion): Response<Unit>
 }
 
 object JellyfinFabrica {

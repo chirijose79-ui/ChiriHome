@@ -20,8 +20,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -49,20 +51,21 @@ class VideoDetalleViewModel(handle: SavedStateHandle) : ViewModel() {
     var estado by mutableStateOf<EstadoDetalle>(EstadoDetalle.Cargando)
         private set
 
-    init {
-        cargar()
-    }
-
+    // La primera vez muestra la rueda de carga; las siguientes recargan sin parpadeo
     fun cargar() {
-        estado = EstadoDetalle.Cargando
+        if (estado !is EstadoDetalle.Listo) estado = EstadoDetalle.Cargando
         viewModelScope.launch {
-            estado = try {
+            try {
                 val api = SesionVideo.api ?: error("No hay sesión de video iniciada")
                 val pelicula = api.detalle(SesionVideo.usuarioId, id).items.firstOrNull()
                     ?: error("No se encontró la película")
-                EstadoDetalle.Listo(pelicula)
+                estado = EstadoDetalle.Listo(pelicula)
             } catch (e: Exception) {
-                EstadoDetalle.Fallo("No se pudo cargar: ${e.message ?: e.javaClass.simpleName}")
+                if (estado !is EstadoDetalle.Listo) {
+                    estado = EstadoDetalle.Fallo(
+                        "No se pudo cargar: ${e.message ?: e.javaClass.simpleName}"
+                    )
+                }
             }
         }
     }
@@ -70,10 +73,14 @@ class VideoDetalleViewModel(handle: SavedStateHandle) : ViewModel() {
 
 @Composable
 fun VideoDetalleScreen(
-    alReproducir: (String) -> Unit,
+    // Recibe el id de la película y desde qué milisegundo empezar
+    alReproducir: (String, Long) -> Unit,
     modifier: Modifier = Modifier,
     vm: VideoDetalleViewModel = viewModel()
 ) {
+    // Se carga al entrar y cada vez que el servidor guarda una posición nueva (al volver del reproductor)
+    LaunchedEffect(SesionVideo.versionProgreso.intValue) { vm.cargar() }
+
     Column(modifier.fillMaxSize()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (val e = vm.estado) {
@@ -98,7 +105,9 @@ fun VideoDetalleScreen(
 }
 
 @Composable
-private fun Detalle(pelicula: JfItem, alReproducir: (String) -> Unit) {
+private fun Detalle(pelicula: JfItem, alReproducir: (String, Long) -> Unit) {
+    val continuarMs = posicionParaContinuar(pelicula)
+
     Column(
         Modifier
             .fillMaxSize()
@@ -117,7 +126,11 @@ private fun Detalle(pelicula: JfItem, alReproducir: (String) -> Unit) {
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(pelicula.nombre ?: "Sin título", style = MaterialTheme.typography.titleLarge)
-                val datos = listOfNotNull(pelicula.anio?.toString(), duracionTexto(pelicula))
+                val datos = listOfNotNull(
+                    pelicula.anio?.toString(),
+                    duracionTexto(pelicula),
+                    if (pelicula.datosUsuario?.vista == true) "Vista" else null
+                )
                 if (datos.isNotEmpty()) {
                     Spacer(Modifier.height(4.dp))
                     Text(datos.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
@@ -130,14 +143,56 @@ private fun Detalle(pelicula: JfItem, alReproducir: (String) -> Unit) {
         }
 
         Spacer(Modifier.height(16.dp))
-        Button(onClick = { alReproducir(pelicula.id) }, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Filled.PlayArrow, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("Reproducir")
+        if (continuarMs != null) {
+            Button(
+                onClick = { alReproducir(pelicula.id, continuarMs) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Continuar desde ${formatoTiempo(continuarMs)}")
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { alReproducir(pelicula.id, 0L) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Empezar desde el principio")
+            }
+        } else {
+            Button(
+                onClick = { alReproducir(pelicula.id, 0L) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Reproducir")
+            }
         }
 
         Spacer(Modifier.height(16.dp))
         Text(pelicula.descripcion ?: "Sin descripción", style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+// Solo se ofrece continuar si dejaste la película empezada (más de 30 segundos) y no la viste entera
+private fun posicionParaContinuar(p: JfItem): Long? {
+    val datos = p.datosUsuario ?: return null
+    if (datos.vista == true) return null
+    // 10.000 ticks = 1 milisegundo
+    val ms = (datos.posicionTicks ?: 0L) / 10_000L
+    return if (ms >= 30_000L) ms else null
+}
+
+private fun formatoTiempo(ms: Long): String {
+    val total = ms / 1000
+    val horas = total / 3600
+    val minutos = (total % 3600) / 60
+    val segundos = total % 60
+    return if (horas > 0) {
+        "%d:%02d:%02d".format(horas, minutos, segundos)
+    } else {
+        "%d:%02d".format(minutos, segundos)
     }
 }
 

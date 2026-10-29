@@ -13,9 +13,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.chirihome.music.data.Favoritos
 import com.chirihome.music.data.Playlists
 import com.chirihome.music.data.Sesion
@@ -145,10 +147,20 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("video/detalle/{id}") {
                             VideoDetalleScreen(
-                                alReproducir = { id -> nav.navigate("video/reproducir/$id") }
+                                alReproducir = { id, desdeMs ->
+                                    nav.navigate("video/reproducir/$id?desde=$desdeMs")
+                                }
                             )
                         }
-                        composable("video/reproducir/{id}") {
+                        composable(
+                            route = "video/reproducir/{id}?desde={desde}",
+                            arguments = listOf(
+                                navArgument("desde") {
+                                    type = NavType.LongType
+                                    defaultValue = 0L
+                                }
+                            )
+                        ) {
                             ReproductorVideoScreen(alVolver = { nav.popBackStack() })
                         }
                         composable("playlists") {

@@ -25,8 +25,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
@@ -36,6 +36,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -48,7 +49,11 @@ import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
+import com.chirihome.music.data.video.InformeVideo
 import com.chirihome.music.data.video.SesionVideo
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.util.UUID
 
 // El reproductor vive en el ViewModel para que no se reinicie al girar la pantalla
 @OptIn(UnstableApi::class)
@@ -57,6 +62,13 @@ class ReproductorVideoViewModel(
     handle: SavedStateHandle
 ) : AndroidViewModel(aplicacion) {
     private val id: String = checkNotNull(handle.get<String>("id"))
+
+    // Desde qué milisegundo empezar (0 = desde el principio)
+    private val desdeMs: Long = handle.get<Long>("desde") ?: 0L
+
+    // Identifica esta reproducción ante Jellyfin
+    private val sesionId: String = UUID.randomUUID().toString()
+    private var inicioInformado = false
 
     val reproductor: ExoPlayer
 
@@ -87,11 +99,38 @@ class ReproductorVideoViewModel(
             override fun onPlayerError(error: PlaybackException) {
                 this@ReproductorVideoViewModel.error = mensaje(error)
             }
+
+            // La primera vez que de verdad suena, se avisa a Jellyfin
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (isPlaying && !inicioInformado) {
+                    inicioInformado = true
+                    InformeVideo.inicio(id, sesionId, reproductor.currentPosition)
+                }
+            }
+
+            // Al pausar o reanudar se informa enseguida
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (inicioInformado) {
+                    InformeVideo.progreso(
+                        id, sesionId, reproductor.currentPosition, enPausa = !playWhenReady
+                    )
+                }
+            }
         })
 
-        reproductor.setMediaItem(MediaItem.fromUri(SesionVideo.urlVideo(id)))
+        reproductor.setMediaItem(MediaItem.fromUri(SesionVideo.urlVideo(id)), desdeMs)
         reproductor.prepare()
         reproductor.playWhenReady = true
+
+        // Jellyfin recomienda informar del progreso cada 10 segundos
+        viewModelScope.launch {
+            while (true) {
+                delay(10_000)
+                if (inicioInformado && reproductor.isPlaying) {
+                    InformeVideo.progreso(id, sesionId, reproductor.currentPosition, enPausa = false)
+                }
+            }
+        }
     }
 
     fun reintentar() {
@@ -129,7 +168,10 @@ class ReproductorVideoViewModel(
     }
 
     override fun onCleared() {
+        // La posición se lee antes de liberar el reproductor
+        val posicion = reproductor.currentPosition
         reproductor.release()
+        if (inicioInformado) InformeVideo.fin(id, sesionId, posicion)
     }
 }
 

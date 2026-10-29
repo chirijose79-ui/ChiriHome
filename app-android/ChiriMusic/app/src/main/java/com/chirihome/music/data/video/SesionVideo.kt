@@ -2,6 +2,7 @@ package com.chirihome.music.data.video
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import java.util.UUID
 
@@ -23,6 +24,9 @@ object SesionVideo {
 
     // Pasa a true cuando Jellyfin rechaza el token
     val sesionCaducada = mutableStateOf(false)
+
+    // Sube cada vez que el servidor guarda una posición nueva, para que las pantallas se actualicen
+    val versionProgreso = mutableIntStateOf(0)
 
     // Llamar una vez al arrancar la app
     fun init(contexto: Context) {
