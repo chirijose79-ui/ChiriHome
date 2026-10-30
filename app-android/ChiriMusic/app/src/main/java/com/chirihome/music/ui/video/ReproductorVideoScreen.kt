@@ -53,6 +53,7 @@ import com.chirihome.music.data.video.InformeVideo
 import com.chirihome.music.data.video.SesionVideo
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.seconds
 import java.util.UUID
 
 // El reproductor vive en el ViewModel para que no se reinicie al girar la pantalla
@@ -125,7 +126,7 @@ class ReproductorVideoViewModel(
         // Jellyfin recomienda informar del progreso cada 10 segundos
         viewModelScope.launch {
             while (true) {
-                delay(10_000)
+                delay(10.seconds)
                 if (inicioInformado && reproductor.isPlaying) {
                     InformeVideo.progreso(id, sesionId, reproductor.currentPosition, enPausa = false)
                 }
@@ -193,11 +194,12 @@ fun ReproductorVideoScreen(
     val contexto = LocalContext.current
     val actividad = remember(contexto) { contexto.buscarActividad() }
 
-    // Pantalla completa y horizontal mientras se ve el video; al salir, todo vuelve a la normalidad
+    // Pantalla completa mientras se ve el video. La orientación sigue al celular
+    // (y respeta el bloqueo de rotación de Android); al salir, todo vuelve a la normalidad
     DisposableEffect(actividad) {
         val ventana = actividad.window
         val controlador = WindowCompat.getInsetsController(ventana, ventana.decorView)
-        actividad.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        actividad.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         controlador.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         controlador.hide(WindowInsetsCompat.Type.systemBars())
