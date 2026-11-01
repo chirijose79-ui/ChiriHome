@@ -48,7 +48,6 @@ import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import com.chirihome.music.data.video.JfItem
 import com.chirihome.music.data.video.SesionVideo
-import com.chirihome.music.ui.reproductor.MiniReproductor
 import kotlinx.coroutines.launch
 
 sealed interface EstadoVideo {
@@ -153,8 +152,6 @@ fun VideoScreen(
                     }
             }
         }
-
-        MiniReproductor()
     }
 
     if (confirmarSalir) {

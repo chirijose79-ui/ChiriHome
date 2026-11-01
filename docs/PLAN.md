@@ -43,4 +43,15 @@
 - [x] Mini reproductor con línea de progreso y fondo difuminado con la carátula del álbum
 - [x] Pantalla de bloqueo y notificación: se abre la app al tocarlos y tienen botones de aleatorio y repetir (la letra no es posible ahí)
 
-## Funciones propias
+## Funciones propias (después de la fase 6)
+- [ ] Playlists automáticas
+- [ ] Bot de Telegram
+- [x] Panel web de administración (hecho como parte de la Fase 6)
+- [ ] Reportes de uso
+
+## Ideas para más adelante
+- [ ] Series en la pantalla de video (hoy solo películas)
+- [ ] Marcar como vistas y mostrar el progreso en la cuadrícula de películas
+- [ ] Botón de pantalla completa que fuerce la posición horizontal
+- [ ] Carátula del reproductor de la pantalla de bloqueo desde la caché del celular (para verla sin conexión)
+- [ ] Crear también el usuario en Navidrome desde el panel (hoy Navidrome lo crea solo la primera vez que entra)

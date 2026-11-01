@@ -36,7 +36,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.chirihome.music.data.video.JfItem
 import com.chirihome.music.data.video.SesionVideo
-import com.chirihome.music.ui.reproductor.MiniReproductor
 import kotlinx.coroutines.launch
 
 sealed interface EstadoDetalle {
@@ -81,26 +80,23 @@ fun VideoDetalleScreen(
     // Se carga al entrar y cada vez que el servidor guarda una posición nueva (al volver del reproductor)
     LaunchedEffect(SesionVideo.versionProgreso.intValue) { vm.cargar() }
 
-    Column(modifier.fillMaxSize()) {
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            when (val e = vm.estado) {
-                EstadoDetalle.Cargando -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-
-                is EstadoDetalle.Fallo -> Column(
-                    Modifier.fillMaxSize().padding(24.dp),
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(e.mensaje, color = MaterialTheme.colorScheme.error)
-                    Spacer(Modifier.height(12.dp))
-                    Button(onClick = { vm.cargar() }) { Text("Reintentar") }
-                }
-
-                is EstadoDetalle.Listo -> Detalle(e.pelicula, alReproducir)
+    Box(modifier.fillMaxSize()) {
+        when (val e = vm.estado) {
+            EstadoDetalle.Cargando -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
             }
+
+            is EstadoDetalle.Fallo -> Column(
+                Modifier.fillMaxSize().padding(24.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(e.mensaje, color = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.height(12.dp))
+                Button(onClick = { vm.cargar() }) { Text("Reintentar") }
+            }
+
+            is EstadoDetalle.Listo -> Detalle(e.pelicula, alReproducir)
         }
-        MiniReproductor()
     }
 }
 
@@ -196,7 +192,8 @@ private fun formatoTiempo(ms: Long): String {
     }
 }
 
-private fun duracionTexto(p: JfItem): String? =
+// También la usa la ficha que se muestra debajo del video
+internal fun duracionTexto(p: JfItem): String? =
     p.duracionTicks?.let { ticks ->
         // 600.000.000 ticks = 1 minuto
         val minutos = ticks / 600_000_000L

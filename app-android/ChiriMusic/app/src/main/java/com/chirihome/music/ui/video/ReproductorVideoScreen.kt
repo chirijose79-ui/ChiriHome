@@ -4,20 +4,32 @@ import android.app.Application
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
+import android.content.res.Configuration
+import android.provider.Settings
+import android.view.OrientationEventListener
 import androidx.activity.ComponentActivity
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -50,6 +63,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import com.chirihome.music.data.video.InformeVideo
+import com.chirihome.music.data.video.JfItem
 import com.chirihome.music.data.video.SesionVideo
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -74,6 +88,10 @@ class ReproductorVideoViewModel(
     val reproductor: ExoPlayer
 
     var error by mutableStateOf<String?>(null)
+        private set
+
+    // La ficha de la película, para mostrarla debajo del video cuando está en vertical
+    var pelicula by mutableStateOf<JfItem?>(null)
         private set
 
     init {
@@ -130,6 +148,18 @@ class ReproductorVideoViewModel(
                 if (inicioInformado && reproductor.isPlaying) {
                     InformeVideo.progreso(id, sesionId, reproductor.currentPosition, enPausa = false)
                 }
+            }
+        }
+
+        // La ficha es un extra: si no se puede cargar, simplemente no se muestra
+        viewModelScope.launch {
+            try {
+                val api = SesionVideo.api
+                if (api != null) {
+                    pelicula = api.detalle(SesionVideo.usuarioId, id).items.firstOrNull()
+                }
+            } catch (_: Exception) {
+                // Sin ficha, solo se ve el video
             }
         }
     }
@@ -194,19 +224,71 @@ fun ReproductorVideoScreen(
     val contexto = LocalContext.current
     val actividad = remember(contexto) { contexto.buscarActividad() }
 
-    // Pantalla completa mientras se ve el video. La orientación sigue al celular
-    // (y respeta el bloqueo de rotación de Android); al salir, todo vuelve a la normalidad
+    // En horizontal: pantalla completa. En vertical: video arriba y la ficha de la película debajo
+    val horizontal = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    // Orientación fijada con el botón de maximizar o minimizar (null = sigue al celular)
+    val bloqueo = remember { mutableStateOf<Int?>(null) }
+    val maximizar = remember(actividad) {
+        {
+            bloqueo.value = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            actividad.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        }
+    }
+    val minimizar = remember(actividad) {
+        {
+            bloqueo.value = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            actividad.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+    }
+
+    // Al salir del reproductor, las barras y la orientación vuelven a la normalidad
     DisposableEffect(actividad) {
-        val ventana = actividad.window
-        val controlador = WindowCompat.getInsetsController(ventana, ventana.decorView)
-        actividad.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        controlador.systemBarsBehavior =
-            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        controlador.hide(WindowInsetsCompat.Type.systemBars())
         onDispose {
-            controlador.show(WindowInsetsCompat.Type.systemBars())
+            val ventana = actividad.window
+            WindowCompat.getInsetsController(ventana, ventana.decorView)
+                .show(WindowInsetsCompat.Type.systemBars())
             actividad.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
+    }
+
+    // Las barras del sistema se ocultan solo en pantalla completa
+    LaunchedEffect(horizontal) {
+        val ventana = actividad.window
+        val controlador = WindowCompat.getInsetsController(ventana, ventana.decorView)
+        if (horizontal) {
+            controlador.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controlador.hide(WindowInsetsCompat.Type.systemBars())
+        } else {
+            controlador.show(WindowInsetsCompat.Type.systemBars())
+        }
+    }
+
+    // Cuando giras el celular a la posición que forzaste con el botón, vuelve a seguirlo con normalidad
+    DisposableEffect(actividad) {
+        val escucha = object : OrientationEventListener(actividad) {
+            override fun onOrientationChanged(grados: Int) {
+                if (grados == OrientationEventListener.ORIENTATION_UNKNOWN) return
+                val forzada = bloqueo.value ?: return
+                // Con la rotación automática desactivada no se suelta: volvería a la posición fija del sistema
+                val rotacionAuto = Settings.System.getInt(
+                    actividad.contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0
+                ) == 1
+                if (!rotacionAuto) return
+                val vertical = grados <= 30 || grados >= 330 || grados in 150..210
+                val apaisado = grados in 60..120 || grados in 240..300
+                val coincide =
+                    (forzada == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT && vertical) ||
+                            (forzada == ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE && apaisado)
+                if (coincide) {
+                    bloqueo.value = null
+                    actividad.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                }
+            }
+        }
+        if (escucha.canDetectOrientation()) escucha.enable()
+        onDispose { escucha.disable() }
     }
 
     // Si sales de la app, el video se pausa
@@ -218,34 +300,82 @@ fun ReproductorVideoScreen(
         onDispose { actividad.lifecycle.removeObserver(observador) }
     }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
-        AndroidView(
-            factory = { ctx ->
-                PlayerView(ctx).apply {
-                    player = vm.reproductor
-                    useController = true
-                    setShowSubtitleButton(true)
-                }
-            },
-            update = { it.player = vm.reproductor },
-            onRelease = { it.player = null },
-            modifier = Modifier.fillMaxSize()
-        )
+    Column(Modifier.fillMaxSize().background(Color.Black)) {
+        // El video está siempre en el mismo sitio del árbol, para que no se recree al cambiar de modo
+        Box(
+            modifier = if (horizontal) {
+                Modifier.fillMaxSize()
+            } else {
+                Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+            }
+        ) {
+            AndroidView(
+                factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        player = vm.reproductor
+                        useController = true
+                        setShowSubtitleButton(true)
+                        // El botón de los controles maximiza o minimiza
+                        setFullscreenButtonClickListener { quiereCompleta ->
+                            if (quiereCompleta) maximizar() else minimizar()
+                        }
+                    }
+                },
+                update = {
+                    it.player = vm.reproductor
+                    // Así el icono del botón coincide con el modo actual
+                    it.setFullscreenButtonState(horizontal)
+                },
+                onRelease = { it.player = null },
+                modifier = Modifier.fillMaxSize()
+            )
 
-        val mensajeError = vm.error
-        if (mensajeError != null) {
-            Column(
-                Modifier.align(Alignment.Center).padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(mensajeError, color = Color.White, textAlign = TextAlign.Center)
-                Row(
-                    Modifier.padding(top = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+            val mensajeError = vm.error
+            if (mensajeError != null) {
+                Column(
+                    Modifier.align(Alignment.Center).padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Button(onClick = { vm.reintentar() }) { Text("Reintentar") }
-                    OutlinedButton(onClick = alVolver) { Text("Volver") }
+                    Text(mensajeError, color = Color.White, textAlign = TextAlign.Center)
+                    Row(
+                        Modifier.padding(top = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(onClick = { vm.reintentar() }) { Text("Reintentar") }
+                        OutlinedButton(onClick = alVolver) { Text("Volver") }
+                    }
                 }
+            }
+        }
+
+        if (!horizontal) FichaPelicula(vm.pelicula)
+    }
+}
+
+// Lo que se ve debajo del video cuando el celular está en vertical
+@Composable
+private fun ColumnScope.FichaPelicula(pelicula: JfItem?) {
+    Column(
+        Modifier
+            .weight(1f)
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+    ) {
+        if (pelicula == null) {
+            Text("Reproduciendo…", style = MaterialTheme.typography.titleMedium)
+        } else {
+            Text(pelicula.nombre ?: "Sin título", style = MaterialTheme.typography.titleLarge)
+            val datos = listOfNotNull(pelicula.anio?.toString(), duracionTexto(pelicula))
+            if (datos.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                Text(datos.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
+            }
+            val descripcion = pelicula.descripcion
+            if (!descripcion.isNullOrBlank()) {
+                Spacer(Modifier.height(12.dp))
+                Text(descripcion, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
