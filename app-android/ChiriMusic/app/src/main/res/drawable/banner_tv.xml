@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path android:pathData="M0,0h320v180h-320z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="0"
+                android:startY="0"
+                android:endX="320"
+                android:endY="180"
+                android:type="linear">
+                <item
+                    android:color="#FF4B3FB5"
+                    android:offset="0.0" />
+                <item
+                    android:color="#FF1A1547"
+                    android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- La doble nota del icono, ampliada y centrada -->
+    <group
+        android:translateX="34.6"
+        android:translateY="-40.8"
+        android:scaleX="2.4"
+        android:scaleY="2.4">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M33,70a7,7 0,1 0,14 0a7,7 0,1 0,-14 0z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M57,64a7,7 0,1 0,14 0a7,7 0,1 0,-14 0z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M44,70L44,38L47.5,38L47.5,70z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M68,64L68,32L71.5,32L71.5,64z" />
+        <path
+            android:fillColor="#FFFFC107"
+            android:pathData="M44,38L71.5,32L71.5,40L44,46z" />
+    </group>
+</vector>

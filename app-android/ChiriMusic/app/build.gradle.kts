@@ -4,6 +4,16 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// Datos de la llave de firma. Viven en ~/.gradle/gradle.properties, fuera del proyecto y del repo
+val llaveArchivo: String? = providers.gradleProperty("CHIRI_STORE_FILE").orNull
+val llaveClaveAlmacen: String? = providers.gradleProperty("CHIRI_STORE_PASSWORD").orNull
+val llaveAlias: String? = providers.gradleProperty("CHIRI_KEY_ALIAS").orNull
+val llaveClave: String? = providers.gradleProperty("CHIRI_KEY_PASSWORD").orNull
+val firmaCompleta = llaveArchivo != null &&
+        llaveClaveAlmacen != null &&
+        llaveAlias != null &&
+        llaveClave != null
+
 android {
     namespace = "com.chirihome.music"
     compileSdk {
@@ -14,14 +24,30 @@ android {
         applicationId = "com.chirihome.music"
         minSdk = 26
         targetSdk = 37
+        // Cada versión que repartas debe tener un versionCode mayor que la anterior
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            if (firmaCompleta) {
+                storeFile = file(llaveArchivo!!)
+                storePassword = llaveClaveAlmacen
+                keyAlias = llaveAlias
+                keyPassword = llaveClave
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // Sin los datos de firma, el APK sale como "app-release-unsigned.apk"
+            if (firmaCompleta) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:translateX="1.75"
+        android:translateY="-0.5">
+        <!-- Cabezas de las notas -->
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M33,70a7,7 0,1 0,14 0a7,7 0,1 0,-14 0z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M57,64a7,7 0,1 0,14 0a7,7 0,1 0,-14 0z" />
+        <!-- Plicas -->
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M44,70L44,38L47.5,38L47.5,70z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M68,64L68,32L71.5,32L71.5,64z" />
+        <!-- Barra que une las dos notas -->
+        <path
+            android:fillColor="#FFFFC107"
+            android:pathData="M44,38L71.5,32L71.5,40L44,46z" />
+    </group>
+</vector>

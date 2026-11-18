@@ -1,6 +1,7 @@
 package com.chirihome.music.ui.video
 
 import android.app.Application
+import android.content.ComponentName
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -42,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -51,26 +54,30 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DefaultHttpDataSource
-import androidx.media3.datasource.HttpDataSource
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
 import androidx.media3.ui.PlayerView
 import com.chirihome.music.data.video.InformeVideo
 import com.chirihome.music.data.video.JfItem
 import com.chirihome.music.data.video.SesionVideo
+import com.chirihome.music.player.ServicioVideo
+import com.google.common.util.concurrent.ListenableFuture
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.util.UUID
 
-// El reproductor vive en el ViewModel para que no se reinicie al girar la pantalla
+// La película se reproduce en el servicio de video; aquí solo hay un mando que la controla
 @OptIn(UnstableApi::class)
 class ReproductorVideoViewModel(
     aplicacion: Application,
@@ -85,7 +92,13 @@ class ReproductorVideoViewModel(
     private val sesionId: String = UUID.randomUUID().toString()
     private var inicioInformado = false
 
-    val reproductor: ExoPlayer
+    @Volatile
+    private var liberado = false
+    private var conexion: ListenableFuture<MediaController>? = null
+
+    // Null mientras se conecta con el servicio de video
+    var reproductor by mutableStateOf<Player?>(null)
+        private set
 
     var error by mutableStateOf<String?>(null)
         private set
@@ -94,95 +107,131 @@ class ReproductorVideoViewModel(
     var pelicula by mutableStateOf<JfItem?>(null)
         private set
 
+    private val escucha = object : Player.Listener {
+        override fun onPlayerError(error: PlaybackException) {
+            this@ReproductorVideoViewModel.error = mensaje(error)
+        }
+
+        // La primera vez que de verdad suena, se avisa a Jellyfin
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            if (isPlaying && !inicioInformado) {
+                inicioInformado = true
+                InformeVideo.inicio(id, sesionId, reproductor?.currentPosition ?: 0L)
+            }
+        }
+
+        // Al pausar o reanudar se informa enseguida
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            if (inicioInformado) {
+                InformeVideo.progreso(
+                    id, sesionId, reproductor?.currentPosition ?: 0L, enPausa = !playWhenReady
+                )
+            }
+        }
+    }
+
     init {
-        // Jellyfin recibe la cabecera de autenticación en cada petición del video
-        val origen = DefaultHttpDataSource.Factory()
-            .setDefaultRequestProperties(mapOf("Authorization" to SesionVideo.cabeceraAuth()))
-            .setConnectTimeoutMs(15_000)
-            .setReadTimeoutMs(30_000)
+        // Primero se piden los datos de la película (título y carátula) y luego se empieza
+        viewModelScope.launch {
+            val ficha = withTimeoutOrNull(4_000) { pedirFicha() }
+            val caratula = withTimeoutOrNull(2_500) { pedirCaratula(ficha) }
+            pelicula = ficha
+            conectar(ficha, caratula)
+        }
 
-        reproductor = ExoPlayer.Builder(aplicacion)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(aplicacion).setDataSourceFactory(origen))
-            // Al pedir el foco de audio, la música se pausa sola
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(C.USAGE_MEDIA)
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
-                    .build(),
-                true
-            )
-            .setHandleAudioBecomingNoisy(true)
-            .build()
-
-        reproductor.addListener(object : Player.Listener {
-            override fun onPlayerError(error: PlaybackException) {
-                this@ReproductorVideoViewModel.error = mensaje(error)
-            }
-
-            // La primera vez que de verdad suena, se avisa a Jellyfin
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                if (isPlaying && !inicioInformado) {
-                    inicioInformado = true
-                    InformeVideo.inicio(id, sesionId, reproductor.currentPosition)
-                }
-            }
-
-            // Al pausar o reanudar se informa enseguida
-            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-                if (inicioInformado) {
-                    InformeVideo.progreso(
-                        id, sesionId, reproductor.currentPosition, enPausa = !playWhenReady
-                    )
-                }
-            }
-        })
-
-        reproductor.setMediaItem(MediaItem.fromUri(SesionVideo.urlVideo(id)), desdeMs)
-        reproductor.prepare()
-        reproductor.playWhenReady = true
-
-        // Jellyfin recomienda informar del progreso cada 10 segundos
+        // Jellyfin recomienda informar del progreso cada 10 segundos, también con la pantalla bloqueada
         viewModelScope.launch {
             while (true) {
-                delay(10.seconds)
-                if (inicioInformado && reproductor.isPlaying) {
-                    InformeVideo.progreso(id, sesionId, reproductor.currentPosition, enPausa = false)
+                delay(10_000)
+                val p = reproductor
+                if (inicioInformado && p != null && p.isPlaying) {
+                    InformeVideo.progreso(id, sesionId, p.currentPosition, enPausa = false)
                 }
             }
         }
+    }
 
-        // La ficha es un extra: si no se puede cargar, simplemente no se muestra
-        viewModelScope.launch {
+    private suspend fun pedirFicha(): JfItem? {
+        val api = SesionVideo.api ?: return null
+        return try {
+            api.detalle(SesionVideo.usuarioId, id).items.firstOrNull()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // La carátula viaja como bytes: el sistema la usa en la pantalla de bloqueo
+    private suspend fun pedirCaratula(ficha: JfItem?): ByteArray? {
+        val etiqueta = ficha?.etiquetasImagen?.get("Primary") ?: return null
+        return withContext(Dispatchers.IO) {
             try {
-                val api = SesionVideo.api
-                if (api != null) {
-                    pelicula = api.detalle(SesionVideo.usuarioId, id).items.firstOrNull()
+                val peticion = Request.Builder()
+                    .url(SesionVideo.urlCaratula(ficha.id, etiqueta, 400))
+                    .header("Authorization", SesionVideo.cabeceraAuth())
+                    .build()
+                OkHttpClient().newCall(peticion).execute().use { respuesta ->
+                    if (respuesta.isSuccessful) respuesta.body?.bytes() else null
                 }
-            } catch (_: Exception) {
-                // Sin ficha, solo se ve el video
+            } catch (e: Exception) {
+                null
             }
         }
+    }
+
+    private fun conectar(ficha: JfItem?, caratula: ByteArray?) {
+        if (liberado) return
+        val app = getApplication<Application>()
+        val token = SessionToken(app, ComponentName(app, ServicioVideo::class.java))
+        val futuro = MediaController.Builder(app, token).buildAsync()
+        conexion = futuro
+        futuro.addListener({
+            if (liberado) {
+                MediaController.releaseFuture(futuro)
+                return@addListener
+            }
+            try {
+                val mando = futuro.get()
+                mando.addListener(escucha)
+                mando.setMediaItem(itemVideo(ficha, caratula), desdeMs)
+                mando.prepare()
+                mando.playWhenReady = true
+                reproductor = mando
+            } catch (e: Exception) {
+                error = "No se pudo iniciar la reproducción de video."
+            }
+        }, ContextCompat.getMainExecutor(app))
+    }
+
+    // Lo que dice el reproductor de la pantalla de bloqueo y la notificación
+    private fun itemVideo(ficha: JfItem?, caratula: ByteArray?): MediaItem {
+        val metadatos = MediaMetadata.Builder()
+            .setTitle(ficha?.nombre ?: "Película")
+            .setArtist("Escuchando el audio del video")
+            .setAlbumTitle("ChiriMusic · Video")
+        if (caratula != null) {
+            metadatos.setArtworkData(caratula, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+        }
+        return MediaItem.Builder()
+            .setMediaId(id)
+            .setUri(SesionVideo.urlVideo(id))
+            .setMediaMetadata(metadatos.build())
+            .build()
     }
 
     fun reintentar() {
         error = null
-        reproductor.prepare()
-        reproductor.play()
+        reproductor?.prepare()
+        reproductor?.play()
     }
 
-    private fun mensaje(e: PlaybackException): String {
-        val causa = e.cause
-        if (causa is HttpDataSource.InvalidResponseCodeException) {
-            if (causa.responseCode == 401) {
-                SesionVideo.sesionCaducada.value = true
-                return "La sesión de video caducó. Vuelve atrás y entra de nuevo."
-            }
-            return "El servidor respondió con error ${causa.responseCode}."
-        }
-        return when (e.errorCode) {
+    private fun mensaje(e: PlaybackException): String =
+        when (e.errorCode) {
             PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
             PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ->
                 "No se pudo conectar con el servidor. ¿Sigue activado Tailscale?"
+
+            PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ->
+                "El servidor rechazó la petición. Si el problema sigue, vuelve atrás y entra de nuevo."
 
             PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
             PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
@@ -196,12 +245,17 @@ class ReproductorVideoViewModel(
 
             else -> "No se pudo reproducir (${e.errorCodeName})."
         }
-    }
 
     override fun onCleared() {
-        // La posición se lee antes de liberar el reproductor
-        val posicion = reproductor.currentPosition
-        reproductor.release()
+        liberado = true
+        val p = reproductor
+        val posicion = p?.currentPosition ?: 0L
+        // Al salir de la película, el audio se detiene y el servicio se apaga
+        if (p != null) {
+            p.stop()
+            p.clearMediaItems()
+        }
+        conexion?.let { MediaController.releaseFuture(it) }
         if (inicioInformado) InformeVideo.fin(id, sesionId, posicion)
     }
 }
@@ -291,10 +345,25 @@ fun ReproductorVideoScreen(
         onDispose { escucha.disable() }
     }
 
-    // Si sales de la app, el video se pausa
+    // Con la app fuera de vista (pantalla bloqueada o Inicio), el audio sigue pero la imagen se desactiva
     DisposableEffect(actividad) {
         val observador = LifecycleEventObserver { _, evento ->
-            if (evento == Lifecycle.Event.ON_STOP) vm.reproductor.pause()
+            val p = vm.reproductor ?: return@LifecycleEventObserver
+            when (evento) {
+                Lifecycle.Event.ON_STOP ->
+                    p.trackSelectionParameters = p.trackSelectionParameters
+                        .buildUpon()
+                        .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)
+                        .build()
+
+                Lifecycle.Event.ON_START ->
+                    p.trackSelectionParameters = p.trackSelectionParameters
+                        .buildUpon()
+                        .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, false)
+                        .build()
+
+                else -> Unit
+            }
         }
         actividad.lifecycle.addObserver(observador)
         onDispose { actividad.lifecycle.removeObserver(observador) }
@@ -331,6 +400,12 @@ fun ReproductorVideoScreen(
             )
 
             val mensajeError = vm.error
+            if (vm.reproductor == null && mensajeError == null) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = Color.White
+                )
+            }
             if (mensajeError != null) {
                 Column(
                     Modifier.align(Alignment.Center).padding(24.dp),

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 108 108">
+  <defs>
+    <linearGradient id="fondo" x1="0" y1="0" x2="108" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4B3FB5"/>
+      <stop offset="1" stop-color="#1A1547"/>
+    </linearGradient>
+  </defs>
+  <rect width="108" height="108" fill="url(#fondo)"/>
+  <g transform="translate(54 54) scale(1.2) translate(-54 -54) translate(1.75 -0.5)">
+    <circle cx="40" cy="70" r="7" fill="#FFFFFF"/>
+    <circle cx="64" cy="64" r="7" fill="#FFFFFF"/>
+    <rect x="44" y="38" width="3.5" height="32" fill="#FFFFFF"/>
+    <rect x="68" y="32" width="3.5" height="32" fill="#FFFFFF"/>
+    <polygon points="44,38 71.5,32 71.5,40 44,46" fill="#FFC107"/>
+  </g>
+</svg>
